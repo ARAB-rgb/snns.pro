@@ -1,20 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Contact, Message, CallRecord } from '../types';
+import { 
+  googleSignIn, 
+  fetchGoogleContactsFromAPI, 
+  logout as firebaseLogout 
+} from '../lib/firebaseAuth';
 import { 
   MessageSquare, 
   Phone, 
   Video, 
   Search, 
   Users, 
-  Clock, 
-  UserPlus, 
   BellRing, 
-  PhoneCall, 
-  CheckCheck, 
-  UserCheck, 
   Plus, 
   Settings, 
-  Activity 
+  Edit, 
+  Trash2, 
+  Eye, 
+  EyeOff, 
+  Lock, 
+  Unlock, 
+  LogOut, 
+  Globe, 
+  ShieldAlert,
+  Sparkles,
+  CheckCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,7 +37,87 @@ interface SidebarProps {
   activeTab: 'chats' | 'calls' | 'contacts';
   setActiveTab: (tab: 'chats' | 'calls' | 'contacts') => void;
   onStartCall: (contact: Contact, type: 'video' | 'audio') => void;
+  
+  // Custom added props for user request
+  currentUser: {
+    name: string;
+    avatar: string;
+    email?: string;
+    avatarType?: 'emoji' | 'image_url';
+    avatarUrl?: string;
+    isGoogleLinked?: boolean;
+    googleEmail?: string;
+  };
+  onUpdateCurrentUser: (user: any) => void;
+  themeBackground: string;
+  onUpdateThemeBackground: (bg: string) => void;
+  showHiddenContacts: boolean;
+  onToggleShowHiddenContacts: (show: boolean) => void;
+  onUpdateContacts: (contacts: Contact[]) => void;
 }
+
+const PREDEFINED_EMOJIS = ['👤', '👨‍💻', '👩‍🎨', '👨‍💼', '👩‍⚕️', '🦁', '🐼', '🦊', '🐱', '🎩', '👑', '🚀', '✨', '⚡'];
+
+const THEMES = [
+  { id: 'bg_cream', name: 'البيج الكلاسيكي', color: 'bg-[#FAF9F6]' },
+  { id: 'bg_olive', name: 'أخضر زيتوني لطيف', color: 'bg-[#F0F2EB]' },
+  { id: 'bg_lavender', name: 'اللافندر الهادئ', color: 'bg-[#F4F1F7]' },
+  { id: 'bg_sakura', name: 'الوردي الهادئ', color: 'bg-[#FAF5F6]' },
+  { id: 'bg_cosmic', name: 'الليل الكوني', color: 'bg-[#14121A]' },
+];
+
+const GOOGLE_MOCK_CONTACTS: Contact[] = [
+  {
+    id: 'g1',
+    name: 'عبدالرحمن الشهري (Google)',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop',
+    status: 'online',
+    role: 'زميل دراسة ومطور برمجيات ذكي',
+    bio: 'shehri@gmail.com • الرياض',
+    isGroup: false,
+    visibility: 'public'
+  },
+  {
+    id: 'g2',
+    name: 'ليلى الحربي (Google)',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop',
+    status: 'offline',
+    role: 'مصممة واجهات ومبدعة محتوى',
+    bio: 'layla.design@gmail.com • جدة',
+    isGroup: false,
+    visibility: 'public'
+  },
+  {
+    id: 'g3',
+    name: 'م. فهد الجابري (Google)',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop',
+    status: 'away',
+    role: 'مستشار تقني ومهندس سحابي',
+    bio: 'fahad.cloud@gmail.com • الدمام',
+    isGroup: false,
+    visibility: 'public'
+  },
+  {
+    id: 'g4',
+    name: 'أثير القحطاني (Google)',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop',
+    status: 'typing',
+    role: 'أخصائية تسويق رقمي وإحصاءات',
+    bio: 'atheer.marketing@gmail.com',
+    isGroup: false,
+    visibility: 'hidden' // One hidden imported contact
+  },
+  {
+    id: 'g5',
+    name: 'أبو تميم العاصمي (Google)',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop',
+    status: 'online',
+    role: 'جار وعضو مجلس الحي الدافئ',
+    bio: 'abu_tamim@gmail.com • مكة المكرمة',
+    isGroup: false,
+    visibility: 'public'
+  }
+];
 
 export default function Sidebar({
   contacts,
@@ -39,16 +129,102 @@ export default function Sidebar({
   activeTab,
   setActiveTab,
   onStartCall,
+  currentUser,
+  onUpdateCurrentUser,
+  themeBackground,
+  onUpdateThemeBackground,
+  showHiddenContacts,
+  onToggleShowHiddenContacts,
+  onUpdateContacts
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSimulateDropdown, setShowSimulateDropdown] = useState(false);
   const [showNewContactModal, setShowNewContactModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showGoogleChoiceModal, setShowGoogleChoiceModal] = useState(false);
+  
+  // New Contact input states
   const [newContactName, setNewContactName] = useState('');
   const [newContactRole, setNewContactRole] = useState('صديق');
   const [newContactIsGroup, setNewContactIsGroup] = useState(false);
+  const [newContactAvatar, setNewContactAvatar] = useState('👤');
+  const [newContactVisibility, setNewContactVisibility] = useState<'public' | 'hidden'>('public');
 
-  // Filter contacts based on search query (by name or status in Arabic/English)
+  // Edit Contact states
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [editContactName, setEditContactName] = useState('');
+  const [editContactRole, setEditContactRole] = useState('');
+  const [editContactAvatar, setEditContactAvatar] = useState('');
+  const [editContactVisibility, setEditContactVisibility] = useState<'public' | 'hidden'>('public');
+
+  // Local settings modal edit states
+  const [editUsername, setEditUsername] = useState(currentUser.name);
+  const [editAvatarType, setEditAvatarType] = useState<'emoji' | 'image_url'>(currentUser.avatarType || 'emoji');
+  const [editAvatarEmoji, setEditAvatarEmoji] = useState(currentUser.avatar);
+  const [editAvatarUrl, setEditAvatarUrl] = useState(currentUser.avatarUrl || '');
+
+  // Privacy Pin states
+  const [privacyPinInput, setPrivacyPinInput] = useState('');
+  const [showPinError, setShowPinError] = useState(false);
+
+  // Keep modal edit state in sync with current user profile
+  useEffect(() => {
+    setEditUsername(currentUser.name);
+    setEditAvatarType(currentUser.avatarType || 'emoji');
+    setEditAvatarEmoji(currentUser.avatar);
+    setEditAvatarUrl(currentUser.avatarUrl || '');
+  }, [currentUser, showSettingsModal]);
+
+  // Helper to render user avatar beautifully
+  const renderUserAvatar = () => {
+    if (currentUser.avatarType === 'image_url' && currentUser.avatarUrl) {
+      return (
+        <img 
+          src={currentUser.avatarUrl} 
+          alt="My Profile" 
+          className="w-10 h-10 rounded-full object-cover border-2 border-[#556B2F] shadow-md"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            // fallback if image fails
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      );
+    }
+    return (
+      <div className="w-10 h-10 rounded-full bg-[#556B2F] flex items-center justify-center text-lg font-bold text-white shadow-md">
+        {currentUser.avatar || '👤'}
+      </div>
+    );
+  };
+
+  // Helper to render contact avatar beautifully (emoji or URL)
+  const renderContactAvatar = (contact: Contact, sizeClass: string = "w-11 h-11 text-xl") => {
+    const isUrl = contact.avatar.startsWith('http://') || contact.avatar.startsWith('https://');
+    if (isUrl) {
+      return (
+        <img 
+          src={contact.avatar} 
+          alt={contact.name} 
+          className={`${sizeClass} rounded-full object-cover border border-[#E5E1D8] shadow-inner`}
+          referrerPolicy="no-referrer"
+        />
+      );
+    }
+    return (
+      <div className={`${sizeClass} rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center shadow-inner select-none`}>
+        {contact.avatar || '👤'}
+      </div>
+    );
+  };
+
+  // Filter contacts based on search query AND hidden visibility
   const filteredContacts = contacts.filter((c) => {
+    // 1. Privacy filter: Hide hidden contacts unless privacy mode is unlocked
+    if (c.visibility === 'hidden' && !showHiddenContacts) {
+      return false;
+    }
+
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
 
@@ -59,12 +235,12 @@ export default function Sidebar({
     const statusVal = c.status.toLowerCase();
     const statusMatch = statusVal.includes(query);
 
-    // Filter by Arabic status value translation
+    // Filter by Arabic status translation
     let arabicStatusMatch = false;
-    const isOnlineQuery = query === 'متصل' || query === 'نشط' || query === 'اونلاين' || 'متصل'.includes(query) || 'نشط'.includes(query) || 'اونلاين'.includes(query);
-    const isOfflineQuery = query === 'غير متصل' || query === 'اوفلاين' || 'غير متصل'.includes(query) || 'اوفلاين'.includes(query);
-    const isTypingQuery = query === 'يكتب' || query === 'يكتب الآن' || 'يكتب'.includes(query) || 'يكتب الآن'.includes(query);
-    const isAwayQuery = query === 'بعيد' || query === 'بالخارج' || query === 'مشغول' || 'بعيد'.includes(query) || 'بالخارج'.includes(query) || 'مشغول'.includes(query);
+    const isOnlineQuery = query === 'متصل' || query === 'نشط' || query === 'اونلاين' || 'متصل'.includes(query);
+    const isOfflineQuery = query === 'غير متصل' || query === 'اوفلاين' || 'غير متصل'.includes(query);
+    const isTypingQuery = query === 'يكتب' || query === 'يكتب الآن';
+    const isAwayQuery = query === 'بعيد' || query === 'مشغول';
 
     if (isOnlineQuery && statusVal === 'online') {
       arabicStatusMatch = true;
@@ -81,27 +257,7 @@ export default function Sidebar({
 
   // Helper to get last message of a contact
   const getLastMessage = (contactId: string) => {
-    const contactMsgs = messages.filter(
-      (m) => m.senderId === contactId || (m.senderId === 'me' && activeContact?.id === contactId)
-    );
-    // Wait, for groups, check sender is in group or it's a group conversation
     const isGroup = contactId.startsWith('group_');
-    const groupMsgs = messages.filter((m) => {
-      if (isGroup) {
-        // If it's group, we can track messages specifically for the group
-        return m.id.includes(contactId) || (m.senderId === 'me' && activeContact?.id === contactId);
-      }
-      return false;
-    });
-
-    const relevantMsgs = isGroup ? groupMsgs : messages.filter(
-      (m) => (m.senderId === contactId && activeContact?.id === 'me') || // fallback or direct
-             (m.senderId === contactId && !m.id.includes('group_')) ||
-             (m.senderId === 'me' && activeContact?.id === contactId)
-    );
-
-    // Dynamic precise message linking: let's filter messages by senderId = contactId or (senderId = 'me' and target is contactId in our UI flow)
-    // To keep it simple and correct, we find messages belonging to this chat session
     const chatMsgs = messages.filter(m => {
       if (isGroup) {
         return m.id.startsWith(contactId) || m.id.endsWith(contactId);
@@ -112,7 +268,6 @@ export default function Sidebar({
     });
 
     if (chatMsgs.length === 0) {
-      // Return a placeholder or mock initial message based on data
       const initialMap: Record<string, string> = {
         '1': 'دعنا نجرب مكالمة فيديو بعد قليل...',
         '2': 'أرسلت لك صورة لطبق الحلى الذي صنعته...',
@@ -126,11 +281,224 @@ export default function Sidebar({
     return chatMsgs[chatMsgs.length - 1];
   };
 
-  // Get active chats (contacts who have messages)
-  const activeChatContacts = filteredContacts.filter((c) => {
-    // For simplicity, display all contacts as available chats, sorting by last activity
-    return true;
-  });
+  // Trigger real or simulated Google Login
+  const handleGoogleConnect = async (mode: 'real' | 'mock') => {
+    setShowGoogleChoiceModal(false);
+    if (mode === 'real') {
+      try {
+        const result = await googleSignIn();
+        if (!result) return;
+        
+        const { user, accessToken } = result;
+        
+        // Fetch real Google Contacts
+        const googleConnections = await fetchGoogleContactsFromAPI(accessToken);
+        
+        // Map Google connections to Contact format
+        const importedContacts: Contact[] = googleConnections.map((person, idx) => {
+          const id = person.resourceName ? person.resourceName.replace('people/', 'google_') : `google_${Date.now()}_${idx}`;
+          const name = person.names?.[0]?.displayName || person.emailAddresses?.[0]?.value || 'جهة اتصال Google مجهولة';
+          const email = person.emailAddresses?.[0]?.value || '';
+          const avatar = person.photos?.[0]?.url || '👤';
+          
+          const roles = [
+            'مستورد من Google • زميل دراسة ومطور برمجيات ذكي',
+            'مستورد من Google • صديق مقرب',
+            'مستورد من Google • مدير العمل التقني',
+            'مستورد من Google • أخصائي استشاري',
+            'مستورد من Google • عضو فريق المبادرة'
+          ];
+          const role = roles[idx % roles.length];
+          
+          return {
+            id,
+            name,
+            avatar,
+            status: 'offline' as const,
+            role,
+            bio: email ? `${email} • مستورد من حساب Google الخاص بك 🌐` : 'مستورد من حساب Google الخاص بك 🌐',
+            isGroup: false,
+            visibility: 'public' as const
+          };
+        });
+
+        // Update current user state with Google profile details
+        onUpdateCurrentUser({
+          ...currentUser,
+          name: user.displayName || currentUser.name,
+          avatarType: 'image_url',
+          avatarUrl: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150',
+          isGoogleLinked: true,
+          googleEmail: user.email || ''
+        });
+
+        // Remove old Google contacts (mock or real) and add new ones
+        const baseContacts = contacts.filter(c => !c.id.startsWith('g') && !c.id.startsWith('google_'));
+        const updatedList = [...importedContacts, ...baseContacts];
+        
+        onUpdateContacts(updatedList);
+        
+        alert(`🎉 تم الربط والمزامنة بنجاح! تم استيراد ${importedContacts.length} جهة اتصال حقيقية من حساب Google الخاص بك وتحديث صورتك الشخصية المستوردة تلقائياً.`);
+      } catch (err: any) {
+        console.error("Google sync error:", err);
+        alert(`❌ فشل ربط ومزامنة Google: ${err.message || err}`);
+      }
+    } else {
+      // Simulate beautiful Google linking
+      onUpdateCurrentUser({
+        ...currentUser,
+        name: 'عبدالله العتيبي (جوجل)',
+        avatarType: 'image_url',
+        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150',
+        isGoogleLinked: true,
+        googleEmail: 'abdullah.otaibi@gmail.com'
+      });
+      
+      // Automatically import simulated contacts
+      const updatedList = [...contacts];
+      GOOGLE_MOCK_CONTACTS.forEach(mockC => {
+        if (!updatedList.some(c => c.id === mockC.id)) {
+          updatedList.unshift(mockC);
+        }
+      });
+      onUpdateContacts(updatedList);
+      
+      alert("🎉 تم الربط بنجاح! تم استيراد 5 جهات اتصال من حساب Google الخاص بك وتحديث صورتك الشخصية المستوردة تلقائياً.");
+    }
+  };
+
+  // Disconnect Google
+  const handleGoogleDisconnect = async () => {
+    const confirmed = window.confirm("هل أنت متأكد من إلغاء ربط حساب Google؟ سيتم إزالة جهات الاتصال المستوردة.");
+    if (!confirmed) return;
+
+    try {
+      await firebaseLogout();
+    } catch (err) {
+      console.warn("Firebase signout error:", err);
+    }
+
+    onUpdateCurrentUser({
+      ...currentUser,
+      name: 'عبدالله العتيبي',
+      avatar: '👤',
+      avatarType: 'emoji',
+      avatarUrl: '',
+      isGoogleLinked: false,
+      googleEmail: ''
+    });
+
+    // Remove mock and real google contacts
+    const filtered = contacts.filter(c => !c.id.startsWith('g') && !c.id.startsWith('google_'));
+    onUpdateContacts(filtered);
+  };
+
+  // Add Contact Handler
+  const handleAddContactSubmit = () => {
+    if (!newContactName.trim()) return;
+
+    const newContact: Contact = {
+      id: `contact_${Date.now()}`,
+      name: newContactName,
+      avatar: newContactAvatar,
+      status: 'online',
+      role: newContactRole,
+      bio: newContactIsGroup ? newContactRole : `${newContactRole} | متاح الآن على المنصة 💬`,
+      isGroup: newContactIsGroup,
+      visibility: newContactVisibility
+    };
+
+    onUpdateContacts([newContact, ...contacts]);
+    onSelectContact(newContact);
+    setActiveTab('chats');
+
+    // Reset fields
+    setNewContactName('');
+    setNewContactRole('صديق');
+    setNewContactIsGroup(false);
+    setNewContactAvatar('👤');
+    setNewContactVisibility('public');
+    setShowNewContactModal(false);
+  };
+
+  // Edit Contact Handler
+  const handleEditContactSubmit = () => {
+    if (!editingContact || !editContactName.trim()) return;
+
+    const updated = contacts.map(c => {
+      if (c.id === editingContact.id) {
+        return {
+          ...c,
+          name: editContactName,
+          role: editContactRole,
+          avatar: editContactAvatar,
+          visibility: editContactVisibility,
+          bio: c.isGroup ? editContactRole : `${editContactRole} | معدّل ⚙️`
+        };
+      }
+      return c;
+    });
+
+    onUpdateContacts(updated);
+    
+    // Update active contact if edited
+    if (activeContact?.id === editingContact.id) {
+      onSelectContact({
+        ...activeContact,
+        name: editContactName,
+        role: editContactRole,
+        avatar: editContactAvatar,
+        visibility: editContactVisibility
+      });
+    }
+
+    setEditingContact(null);
+  };
+
+  // Delete Contact
+  const handleDeleteContact = (contactId: string) => {
+    const confirmed = window.confirm("هل أنت متأكد من حذف جهة الاتصال هذه تماماً؟ لا يمكن التراجع.");
+    if (!confirmed) return;
+
+    const filtered = contacts.filter(c => c.id !== contactId);
+    onUpdateContacts(filtered);
+
+    if (activeContact?.id === contactId) {
+      onSelectContact(filtered[0] || null);
+    }
+    setEditingContact(null);
+  };
+
+  // Toggle privacy mode with simple passcode protection
+  const handleTogglePrivacyMode = () => {
+    if (showHiddenContacts) {
+      // Locking is immediate
+      onToggleShowHiddenContacts(false);
+      alert("🔒 تم قفل وضع الخصوصية وإخفاء جهات الاتصال الخاصة بنجاح.");
+    } else {
+      // Unlocking requires simple passcode check
+      const pin = window.prompt("أدخل رمز المرور لفتح وضع الخصوصية (الرمز الافتراضي: 1234):");
+      if (pin === '1234') {
+        onToggleShowHiddenContacts(true);
+        alert("🔓 تم فتح وضع الخصوصية! تظهر جهات الاتصال المخفية باللون المموه الآن.");
+      } else if (pin !== null) {
+        alert("❌ رمز المرور خاطئ! يرجى المحاولة مجدداً.");
+      }
+    }
+  };
+
+  // Save profile settings
+  const handleSaveProfileSettings = () => {
+    onUpdateCurrentUser({
+      ...currentUser,
+      name: editUsername,
+      avatar: editAvatarEmoji,
+      avatarType: editAvatarType,
+      avatarUrl: editAvatarUrl
+    });
+    setShowSettingsModal(false);
+    alert("⚙️ تم حفظ تعديلات الملف الشخصي بنجاح.");
+  };
 
   return (
     <div id="app_sidebar" className="w-full md:w-96 flex flex-col h-full bg-[#FAF9F6] border-l border-[#E5E1D8] text-[#2D2D2D] select-none">
@@ -138,63 +506,87 @@ export default function Sidebar({
       {/* Header Info */}
       <div className="p-4 bg-[#F2F0E9] border-b border-[#E5E1D8] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-[#556B2F] flex items-center justify-center text-lg font-bold text-white shadow-md">
-              👤
-            </div>
+          <div className="relative cursor-pointer" onClick={() => setShowSettingsModal(true)} title="الملف الشخصي والإعدادات">
+            {renderUserAvatar()}
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#556B2F] border-2 border-[#F2F0E9] rounded-full"></span>
           </div>
-          <div>
-            <h2 className="font-semibold text-sm text-[#2D2D2D] flex items-center gap-1.5">
-              المستخدم الحالي
-              <span className="text-[10px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.5 rounded-full font-bold">أنا</span>
+          <div className="text-right">
+            <h2 className="font-semibold text-sm text-[#2D2D2D] flex items-center gap-1.5 cursor-pointer hover:text-[#556B2F]" onClick={() => setShowSettingsModal(true)}>
+              {currentUser.name}
+              {currentUser.isGoogleLinked && (
+                <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Google
+                </span>
+              )}
             </h2>
-            <p className="text-[11px] text-[#A8A293]">متصل (جوال + كمبيوتر)</p>
+            <p className="text-[10px] text-[#A8A293] font-medium truncate max-w-[150px]">
+              {currentUser.isGoogleLinked ? currentUser.googleEmail : 'متصل (جوال + كمبيوتر)'}
+            </p>
           </div>
         </div>
 
-        {/* Call Simulator & Settings Controls */}
-        <div className="flex items-center gap-2 relative">
+        {/* Action Controls */}
+        <div className="flex items-center gap-1.5">
+          {/* Privacy Toggle button */}
+          <button
+            onClick={handleTogglePrivacyMode}
+            title={showHiddenContacts ? "وضع الخصوصية نشط (اضغط للقفل)" : "إظهار جهات الاتصال المخفية (يتطلب رقم سري)"}
+            className={`p-2 rounded-xl border transition-all ${
+              showHiddenContacts 
+                ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100' 
+                : 'bg-[#FAF9F6] border-[#E5E1D8] text-[#A8A293] hover:text-[#2D2D2D]'
+            }`}
+          >
+            {showHiddenContacts ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* App Settings Modal Trigger */}
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            title="تغيير الصورة، الاسم، الخلفية، وربط جوجل"
+            className="p-2 bg-[#FAF9F6] border border-[#E5E1D8] hover:bg-[#E5E1D8] rounded-xl text-[#2D2D2D] hover:text-[#556B2F] transition duration-150"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Call Simulator Button */}
           <button 
             id="simulate_call_btn"
             onClick={() => setShowSimulateDropdown(!showSimulateDropdown)}
             title="محاكاة مكالمة واردة"
-            className="p-2 hover:bg-[#E5E1D8] rounded-lg text-[#556B2F] hover:text-[#556B2F]/80 transition duration-150 flex items-center gap-1 bg-[#556B2F]/10 border border-[#556B2F]/20"
+            className="p-2 hover:bg-[#E5E1D8] rounded-xl text-[#556B2F] hover:text-[#556B2F]/80 transition duration-150 flex items-center bg-[#556B2F]/10 border border-[#556B2F]/20"
           >
-            <BellRing className="w-4 h-4 animate-bounce text-[#556B2F]" />
-            <span className="text-xs font-bold hidden sm:inline text-[#556B2F]">مكالمة واردة</span>
+            <BellRing className="w-3.5 h-3.5 text-[#556B2F]" />
           </button>
 
           {showSimulateDropdown && (
-            <div className="absolute left-0 top-12 z-50 w-56 bg-white rounded-xl border border-[#E5E1D8] shadow-xl overflow-hidden py-1 text-right">
+            <div className="absolute left-4 top-16 z-50 w-56 bg-white rounded-xl border border-[#E5E1D8] shadow-xl overflow-hidden py-1 text-right">
               <div className="px-3 py-2 border-b border-[#E5E1D8] bg-[#FAF9F6]">
-                <span className="text-[11px] font-bold text-[#A8A293] block uppercase tracking-wider">اختر جهة اتصال للاتصال بك:</span>
+                <span className="text-[11px] font-bold text-[#A8A293] block uppercase tracking-wider">اختر متصلاً لمحاكاة اتصال وارد:</span>
               </div>
-              {contacts.filter(c => !c.isGroup).map((c) => (
+              {contacts.filter(c => !c.isGroup && c.visibility !== 'hidden').slice(0, 4).map((c) => (
                 <div key={c.id} className="border-b border-[#E5E1D8]/40 last:border-0">
-                  <div className="px-3 py-1.5 text-xs font-semibold text-[#2D2D2D] bg-[#F2F0E9] flex items-center justify-between">
+                  <div className="px-3 py-1 text-xs font-semibold text-[#2D2D2D] bg-[#F2F0E9] flex items-center justify-between">
                     <span>{c.name}</span>
-                    <span className="text-[10px] text-[#A8A293] font-normal">{c.avatar}</span>
+                    <span className="text-[10px] text-[#A8A293] font-normal">📞</span>
                   </div>
                   <button
                     onClick={() => {
                       onTriggerIncomingCall(c.id, 'video');
                       setShowSimulateDropdown(false);
                     }}
-                    className="w-full text-right px-4 py-2 text-xs text-[#556B2F] hover:bg-[#556B2F]/10 flex items-center gap-2 transition"
+                    className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F] hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
                   >
-                    <Video className="w-3.5 h-3.5" />
-                    <span>مكالمة فيديو (مثل تيمز/إيمو)</span>
+                    <span>🎥 فيديو (مثل تيمز/إيمو)</span>
                   </button>
                   <button
                     onClick={() => {
                       onTriggerIncomingCall(c.id, 'audio');
                       setShowSimulateDropdown(false);
                     }}
-                    className="w-full text-right px-4 py-2 text-xs text-[#556B2F]/80 hover:bg-[#556B2F]/10 flex items-center gap-2 transition"
+                    className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F]/80 hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
                   >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>مكالمة صوتية (مثل واتساب)</span>
+                    <span>📞 صوتية (مثل واتساب)</span>
                   </button>
                 </div>
               ))}
@@ -218,7 +610,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Main Tabs Navigation */}
+      {/* Tabs Navigation */}
       <div className="flex bg-[#F2F0E9] border-b border-[#E5E1D8] text-xs font-semibold text-[#A8A293]">
         <button
           id="tab_chats"
@@ -250,7 +642,7 @@ export default function Sidebar({
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>جهات الاتصال</span>
+          <span>العناوين ({filteredContacts.length})</span>
           {activeTab === 'contacts' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#556B2F]"></span>}
         </button>
       </div>
@@ -259,10 +651,10 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#FAF9F6]">
         {activeTab === 'chats' && (
           <div className="divide-y divide-[#E5E1D8]/40">
-            {activeChatContacts.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#A8A293]">لا توجد محادثات مطابقة لبحثك</div>
+            {filteredContacts.length === 0 ? (
+              <div className="p-8 text-center text-xs text-[#A8A293]">لا توجد محادثات متطابقة</div>
             ) : (
-              activeChatContacts.map((contact) => {
+              filteredContacts.map((contact) => {
                 const lastMsg = getLastMessage(contact.id);
                 const isSelected = activeContact?.id === contact.id;
                 
@@ -271,15 +663,13 @@ export default function Sidebar({
                     key={contact.id}
                     id={`chat_item_${contact.id}`}
                     onClick={() => onSelectContact(contact)}
-                    className={`p-3.5 flex items-center justify-between cursor-pointer transition ${
-                      isSelected ? 'bg-[#F2F0E9] border-r-4 border-[#556B2F]' : 'hover:bg-[#FAF9F6]'
-                    }`}
+                    className={`p-3.5 flex items-center justify-between cursor-pointer transition relative ${
+                      isSelected ? 'bg-[#F2F0E9] border-r-4 border-[#556B2F]' : 'hover:bg-[#F2F0E9]/30'
+                    } ${contact.visibility === 'hidden' ? 'bg-amber-50/40 border-l-2 border-dashed border-amber-300' : ''}`}
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="relative flex-shrink-0">
-                        <div className="w-12 h-12 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-2xl shadow-inner select-none">
-                          {contact.avatar}
-                        </div>
+                        {renderContactAvatar(contact, "w-11 h-11 text-xl")}
                         {contact.status === 'online' && (
                           <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#FAF9F6] rounded-full animate-pulse"></span>
                         )}
@@ -288,13 +678,18 @@ export default function Sidebar({
                         )}
                       </div>
                       <div className="text-right overflow-hidden">
-                        <h3 className="font-bold text-sm text-[#2D2D2D] flex items-center gap-1.5 truncate">
+                        <h3 className="font-bold text-sm text-[#2D2D2D] flex items-center gap-1 truncate">
                           {contact.name}
                           {contact.isGroup && (
-                            <span className="text-[10px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
+                            <span className="text-[9px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
+                          )}
+                          {contact.visibility === 'hidden' && (
+                            <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="جهة اتصال مخفية">
+                              🔒 مخفية
+                            </span>
                           )}
                         </h3>
-                        <p className="text-xs text-[#A8A293] truncate mt-0.5 max-w-[200px]">
+                        <p className="text-xs text-[#A8A293] truncate mt-0.5 max-w-[190px]">
                           {contact.status === 'typing' ? (
                             <span className="text-[#556B2F] font-bold animate-pulse">يكتب الآن...</span>
                           ) : (
@@ -304,10 +699,10 @@ export default function Sidebar({
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-1.5 text-left flex-shrink-0">
-                      <span className="text-[10px] text-[#A8A293] font-mono">{lastMsg.timestamp}</span>
+                    <div className="flex flex-col items-end gap-1 text-left flex-shrink-0">
+                      <span className="text-[9px] text-[#A8A293] font-mono">{lastMsg.timestamp}</span>
                       {contact.status === 'online' && !isSelected && (
-                        <span className="w-2.5 h-2.5 bg-[#556B2F] rounded-full"></span>
+                        <span className="w-2 h-2 bg-[#556B2F] rounded-full"></span>
                       )}
                     </div>
                   </div>
@@ -334,9 +729,7 @@ export default function Sidebar({
                     className="p-3.5 flex items-center justify-between hover:bg-[#FAF9F6]/85 transition"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-xl shadow-inner">
-                        {caller.avatar}
-                      </div>
+                      {renderContactAvatar(caller as Contact, "w-10 h-10 text-xl")}
                       <div className="text-right">
                         <h4 className="font-bold text-xs text-[#2D2D2D]">{caller.name}</h4>
                         <div className="flex items-center gap-1.5 text-[11px] text-[#A8A293] mt-0.5">
@@ -358,11 +751,7 @@ export default function Sidebar({
                           const c = contacts.find((con) => con.id === record.contactId);
                           if (c) onStartCall(c, record.type);
                         }}
-                        className={`p-2 rounded-lg transition ${
-                          record.type === 'video'
-                            ? 'hover:bg-[#556B2F]/10 text-[#556B2F]'
-                            : 'hover:bg-[#556B2F]/10 text-[#556B2F]/80'
-                        }`}
+                        className={`p-2 rounded-lg transition hover:bg-[#556B2F]/10 text-[#556B2F]`}
                         title="إعادة الاتصال"
                       >
                         {record.type === 'video' ? <Video className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
@@ -377,16 +766,16 @@ export default function Sidebar({
 
         {activeTab === 'contacts' && (
           <div>
-            <div className="p-3 bg-[#FAF9F6] border-b border-[#E5E1D8] flex items-center justify-between">
-              <span className="text-[11px] text-[#556B2F] font-bold uppercase tracking-wide">قائمة العناوين والجهات ({contacts.length})</span>
+            <div className="p-3.5 bg-[#FAF9F6] border-b border-[#E5E1D8] flex items-center justify-between">
+              <span className="text-[11px] text-[#556B2F] font-bold tracking-wide">جهات العناوين ({filteredContacts.length})</span>
               <button
                 id="add_new_contact_trigger"
                 onClick={() => setShowNewContactModal(true)}
-                className="p-1 hover:bg-[#E5E1D8] text-[#556B2F] hover:text-[#556B2F]/80 rounded-lg flex items-center gap-1 transition"
-                title="إضافة جهة اتصال أو جروب"
+                className="px-2.5 py-1 bg-[#556B2F] hover:bg-[#556B2F]/90 text-white rounded-lg flex items-center gap-1 transition text-[10px] font-bold"
+                title="إضافة جهة اتصال جديدة"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-bold">إضافة جهة</span>
+                <span>إضافة جهة</span>
               </button>
             </div>
 
@@ -395,45 +784,58 @@ export default function Sidebar({
                 <div
                   key={contact.id}
                   id={`contact_item_${contact.id}`}
-                  className="p-3 flex items-center justify-between hover:bg-[#FAF9F6]/80 transition"
+                  className={`p-3 flex items-center justify-between hover:bg-[#FAF9F6]/85 transition ${
+                    contact.visibility === 'hidden' ? 'bg-amber-50/30' : ''
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-xl shadow-inner">
-                      {contact.avatar}
-                    </div>
+                    {renderContactAvatar(contact, "w-10 h-10 text-xl")}
                     <div className="text-right">
-                      <h4 className="font-bold text-xs text-[#2D2D2D] flex items-center gap-1">
-                        {contact.name}
-                        <span className="text-[9px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.2 rounded-full font-bold">
+                      <h4 className="font-bold text-xs text-[#2D2D2D] flex items-center gap-1.5 flex-wrap">
+                        <span>{contact.name}</span>
+                        <span className="text-[8px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.2 rounded-full font-bold">
                           {contact.isGroup ? 'مجموعة' : contact.role.split(' ')[0]}
                         </span>
+                        {contact.visibility === 'hidden' && (
+                          <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.2 rounded-full font-bold flex items-center gap-0.5">
+                            🔒 مخفية
+                          </span>
+                        )}
                       </h4>
-                      <p className="text-[10px] text-[#A8A293] mt-0.5 truncate max-w-[180px]">{contact.bio}</p>
+                      <p className="text-[10px] text-[#A8A293] mt-0.5 truncate max-w-[170px]">{contact.bio}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1">
+                    {/* Edit Contact Button */}
+                    <button
+                      onClick={() => {
+                        setEditingContact(contact);
+                        setEditContactName(contact.name);
+                        setEditContactRole(contact.role);
+                        setEditContactAvatar(contact.avatar);
+                        setEditContactVisibility(contact.visibility || 'public');
+                      }}
+                      className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition"
+                      title="تعديل جهة الاتصال"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    
                     <button
                       onClick={() => onStartCall(contact, 'video')}
                       className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
-                      title="مكالمة فيديو تيمز"
+                      title="مكالمة فيديو"
                     >
                       <Video className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onStartCall(contact, 'audio')}
-                      className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F]/80 rounded-lg transition"
-                      title="مكالمة صوتية واتساب"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => {
                         onSelectContact(contact);
                         setActiveTab('chats');
                       }}
-                      className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F]/90 rounded-lg transition"
-                      title="إرسال رسالة"
+                      className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
+                      title="دردشة فورية"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                     </button>
@@ -445,7 +847,240 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* New Contact Dialog Modal */}
+      {/* --- SETTINGS & PROFILE MODAL --- */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/65 z-[100] flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white border border-[#E5E1D8] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-right animate-fadeIn">
+            <div className="p-4 bg-[#F2F0E9] border-b border-[#E5E1D8] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#2D2D2D] flex items-center gap-2">
+                <Settings className="w-4 h-4 text-[#556B2F]" />
+                الملف الشخصي وإعدادات المنصة
+              </h3>
+              <button onClick={() => setShowSettingsModal(false)} className="text-[#A8A293] hover:text-[#2D2D2D] text-lg font-bold">×</button>
+            </div>
+            
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[80vh] custom-scrollbar">
+              
+              {/* Profile Details (Name & Photo) */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-[#556B2F] border-b border-[#E5E1D8] pb-1">👤 البيانات الشخصية:</h4>
+                
+                <div>
+                  <label className="block text-[11px] text-[#A8A293] font-bold mb-1">اسم المستخدم:</label>
+                  <input
+                    type="text"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
+                    placeholder="أدخل اسمك الكريم"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">نوع الصورة الشخصية:</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEditAvatarType('emoji')}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${
+                        editAvatarType === 'emoji' 
+                          ? 'bg-[#556B2F]/10 border-[#556B2F] text-[#556B2F]' 
+                          : 'border-[#E5E1D8] hover:bg-[#F2F0E9]'
+                      }`}
+                    >
+                      رمز تعبيري (Emoji)
+                    </button>
+                    <button
+                      onClick={() => setEditAvatarType('image_url')}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${
+                        editAvatarType === 'image_url' 
+                          ? 'bg-[#556B2F]/10 border-[#556B2F] text-[#556B2F]' 
+                          : 'border-[#E5E1D8] hover:bg-[#F2F0E9]'
+                      }`}
+                    >
+                      رابط صورة مخصصة (URL)
+                    </button>
+                  </div>
+                </div>
+
+                {editAvatarType === 'emoji' ? (
+                  <div>
+                    <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">اختر رمزك المفضل:</label>
+                    <div className="grid grid-cols-7 gap-2">
+                      {PREDEFINED_EMOJIS.map(em => (
+                        <button
+                          key={em}
+                          onClick={() => setEditAvatarEmoji(em)}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border transition ${
+                            editAvatarEmoji === em ? 'bg-[#556B2F] text-white border-transparent scale-110' : 'border-[#E5E1D8] hover:bg-[#F4F2EE]'
+                          }`}
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[11px] text-[#A8A293] font-bold mb-1">رابط الصورة الشخصية (URL):</label>
+                    <input
+                      type="text"
+                      value={editAvatarUrl}
+                      onChange={(e) => setEditAvatarUrl(e.target.value)}
+                      className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
+                      placeholder="https://example.com/avatar.jpg"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Theme Selector */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-[#556B2F] border-b border-[#E5E1D8] pb-1">🎨 مظهر وخلفية التطبيق:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {THEMES.map(theme => (
+                    <button
+                      key={theme.id}
+                      onClick={() => onUpdateThemeBackground(theme.id)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between transition text-xs font-semibold ${
+                        themeBackground === theme.id 
+                          ? 'border-[#556B2F] bg-[#556B2F]/10 text-[#556B2F]' 
+                          : 'border-[#E5E1D8] hover:bg-[#F4F2EE]'
+                      }`}
+                    >
+                      <span>{theme.name}</span>
+                      <span className={`w-3.5 h-3.5 rounded-full border border-[#E5E1D8] ${theme.color}`}></span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Google Sync and Login Block */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-[#556B2F] border-b border-[#E5E1D8] pb-1">🌐 ربط حساب Google واستيراد الأسماء:</h4>
+                
+                {currentUser.isGoogleLinked ? (
+                  <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-3 text-right space-y-3">
+                    <div className="flex items-center gap-3">
+                      <img src={currentUser.avatarUrl} alt="Google Profile" className="w-10 h-10 rounded-full border border-blue-300" />
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-blue-900">{currentUser.name}</p>
+                        <p className="text-[10px] text-blue-600 font-mono">{currentUser.googleEmail}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          // Re-import Contacts
+                          const updatedList = [...contacts];
+                          GOOGLE_MOCK_CONTACTS.forEach(mockC => {
+                            if (!updatedList.some(c => c.id === mockC.id)) {
+                              updatedList.unshift(mockC);
+                            }
+                          });
+                          onUpdateContacts(updatedList);
+                          alert("🔄 تم تحديث ومزامنة جهات اتصال Google بنجاح.");
+                        }}
+                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>مزامنة جهات الاتصال</span>
+                      </button>
+                      
+                      <button
+                        onClick={handleGoogleDisconnect}
+                        className="py-1.5 px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 border border-red-200 transition"
+                      >
+                        <LogOut className="w-3 h-3" />
+                        <span>إلغاء الربط</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-[10px] text-[#A8A293] mb-2 font-medium">قم بربط حساب Google الخاص بك لاستيراد جهات الاتصال الموثوقة ومزامنة بيانات ملفك الشخصي فوراً.</p>
+                    
+                    {/* Elegant Official Google Style Sign-In button */}
+                    <button
+                      onClick={() => setShowGoogleChoiceModal(true)}
+                      className="w-full flex items-center justify-center gap-2.5 bg-white border border-[#E5E1D8] hover:bg-[#FAF9F6] active:bg-[#F2F0E9] text-[#2D2D2D] font-bold text-xs py-2.5 px-4 rounded-xl transition shadow-sm cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 48 48">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                      </svg>
+                      <span>تسجيل الدخول وربط جهات الاتصال بجوجل</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#F2F0E9] border-t border-[#E5E1D8] flex justify-end gap-2">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="px-4 py-2 bg-[#E5E1D8] hover:bg-[#E5E1D8]/80 text-xs text-[#2D2D2D] font-bold rounded-xl transition"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleSaveProfileSettings}
+                className="px-5 py-2 bg-[#556B2F] hover:bg-[#556B2F]/90 text-xs text-white font-bold rounded-xl transition shadow-md shadow-[#556B2F]/20"
+              >
+                حفظ وإغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- GOOGLE LOGIN CHOICE DIALOG --- */}
+      {showGoogleChoiceModal && (
+        <div className="fixed inset-0 bg-black/70 z-[110] flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white border border-[#E5E1D8] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-right animate-fadeIn">
+            <div className="p-4 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+              <Globe className="w-5 h-5 text-blue-600 animate-pulse" />
+              <h3 className="font-bold text-xs text-blue-900">ربط جهات اتصال قوقل الآمنة</h3>
+            </div>
+            
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-[#2D2D2D] font-medium leading-relaxed">
+                هل ترغب في ربط حسابك بـ Google لتحديث ملفك الشخصي ومزامنة 5 من جهات اتصالك الفورية؟
+              </p>
+              <div className="text-[10px] bg-amber-50 text-amber-800 p-2.5 rounded-xl border border-amber-100 font-semibold">
+                ⚠️ ملاحظة: الربط الحقيقي يتطلب ترخيص التطبيق في لوحة Google Cloud. يمكنك استخدام المحاكاة الذكية السريعة لتجربة استيراد الأسماء والتحكم بخصوصيتها فوراً!
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#F2F0E9] border-t border-[#E5E1D8] flex gap-2 justify-end flex-wrap">
+              <button
+                onClick={() => setShowGoogleChoiceModal(false)}
+                className="px-3 py-2 bg-[#E5E1D8] text-[#2D2D2D] rounded-xl text-[10px] font-bold hover:bg-[#E5E1D8]/85"
+              >
+                تراجع
+              </button>
+              <button
+                onClick={() => handleGoogleConnect('mock')}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold hover:bg-emerald-700 shadow-md shadow-emerald-500/10 flex items-center gap-1"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>مزامنة سريعة (محاكاة)</span>
+              </button>
+              <button
+                onClick={() => handleGoogleConnect('real')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold hover:bg-blue-700 shadow-md shadow-blue-500/10 flex items-center gap-1"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>ربط حقيقي (OAuth)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD NEW CONTACT MODAL --- */}
       {showNewContactModal && (
         <div className="fixed inset-0 bg-black/65 z-[100] flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white border border-[#E5E1D8] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-right animate-fadeIn">
@@ -454,26 +1089,55 @@ export default function Sidebar({
             </div>
             <div className="p-4 space-y-3.5">
               <div>
-                <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">الاسم / عنوان المجموعة:</label>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1">الاسم / عنوان المجموعة:</label>
                 <input
                   type="text"
-                  placeholder="مثال: خالي أبو فهد أو مجموعة التخطيط"
+                  placeholder="مثال: خالي أبو فهد أو فريق العمل"
                   value={newContactName}
                   onChange={(e) => setNewContactName(e.target.value)}
-                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F] focus:border-[#556B2F]"
+                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">الدور / طبيعة العلاقة:</label>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1">الدور / طبيعة العلاقة:</label>
                 <input
                   type="text"
                   placeholder="مثال: ابن عمي، زميل جامعة، شريكي"
                   value={newContactRole}
                   onChange={(e) => setNewContactRole(e.target.value)}
-                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F] focus:border-[#556B2F]"
+                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
                   disabled={newContactIsGroup}
                 />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">حالة الخصوصية والأمان:</label>
+                <select
+                  value={newContactVisibility}
+                  onChange={(e) => setNewContactVisibility(e.target.value as 'public' | 'hidden')}
+                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
+                >
+                  <option value="public">عامة (تظهر للجميع في قائمة العناوين)</option>
+                  <option value="hidden">مخفية (تتطلب تفعيل وضع الخصوصية لإظهارها)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">الرمز التعبيري (Avatar):</label>
+                <div className="grid grid-cols-7 gap-2">
+                  {['👤', '💼', '🏡', '❤️', '💻', '🩺', '👨‍💻', '👩‍🎨', '🦊', '🦁', '⭐', '👥', '📞', '✨'].map(em => (
+                    <button
+                      key={em}
+                      onClick={() => setNewContactAvatar(em)}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-base border transition ${
+                        newContactAvatar === em ? 'bg-[#556B2F] text-white border-transparent' : 'border-[#E5E1D8] hover:bg-[#F4F2EE]'
+                      }`}
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center gap-2 py-1">
@@ -483,7 +1147,10 @@ export default function Sidebar({
                   checked={newContactIsGroup}
                   onChange={(e) => {
                     setNewContactIsGroup(e.target.checked);
-                    if (e.target.checked) setNewContactRole('مجموعة لمناقشة المواضيع العامة');
+                    if (e.target.checked) {
+                      setNewContactRole('مجموعة لمناقشة المواضيع العامة');
+                      setNewContactAvatar('👥');
+                    }
                   }}
                   className="rounded bg-[#F4F2EE] border-[#E5E1D8] text-[#556B2F] focus:ring-0"
                 />
@@ -499,28 +1166,94 @@ export default function Sidebar({
                 إلغاء
               </button>
               <button
-                onClick={() => {
-                  if (!newContactName.trim()) return;
-                  const event = new CustomEvent('addContact', {
-                    detail: {
-                      name: newContactName,
-                      role: newContactRole,
-                      isGroup: newContactIsGroup,
-                      avatar: newContactIsGroup ? '👥' : '👤',
-                    }
-                  });
-                  window.dispatchEvent(event);
-                  
-                  // Reset states
-                  setNewContactName('');
-                  setNewContactRole('صديق');
-                  setNewContactIsGroup(false);
-                  setShowNewContactModal(false);
-                }}
+                onClick={handleAddContactSubmit}
                 className="px-4 py-2 bg-[#556B2F] hover:bg-[#556B2F]/90 text-xs text-white font-bold rounded-xl transition shadow-md shadow-[#556B2F]/20"
               >
                 إضافة وحفظ
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT CONTACT MODAL --- */}
+      {editingContact && (
+        <div className="fixed inset-0 bg-black/65 z-[100] flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white border border-[#E5E1D8] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-right animate-fadeIn">
+            <div className="p-4 bg-[#F2F0E9] border-b border-[#E5E1D8] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#2D2D2D]">تعديل بيانات جهة الاتصال</h3>
+              <button onClick={() => setEditingContact(null)} className="text-[#A8A293] hover:text-[#2D2D2D] text-lg font-bold">×</button>
+            </div>
+            
+            <div className="p-4 space-y-3.5">
+              <div>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1">الاسم / عنوان المجموعة:</label>
+                <input
+                  type="text"
+                  value={editContactName}
+                  onChange={(e) => setEditContactName(e.target.value)}
+                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1">الدور / العلاقة:</label>
+                <input
+                  type="text"
+                  value={editContactRole}
+                  onChange={(e) => setEditContactRole(e.target.value)}
+                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">حالة الخصوصية والأمان:</label>
+                <select
+                  value={editContactVisibility}
+                  onChange={(e) => setEditContactVisibility(e.target.value as 'public' | 'hidden')}
+                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
+                >
+                  <option value="public">عامة (تظهر للجميع في القائمة)</option>
+                  <option value="hidden">مخفية (تتطلب تفعيل وضع الخصوصية لإظهارها)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#A8A293] font-bold mb-1">تعديل الرمز (Emoji or Image URL):</label>
+                <input
+                  type="text"
+                  value={editContactAvatar}
+                  onChange={(e) => setEditContactAvatar(e.target.value)}
+                  className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F] font-mono"
+                  placeholder="أدخل رمز تعبيري أو رابط صورة"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#F2F0E9] border-t border-[#E5E1D8] flex gap-2 justify-between">
+              <button
+                onClick={() => handleDeleteContact(editingContact.id)}
+                className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition flex items-center gap-1"
+                title="حذف جهة الاتصال بالكامل"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>حذف جهة الاتصال</span>
+              </button>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingContact(null)}
+                  className="px-4 py-2 bg-[#E5E1D8] text-xs text-[#2D2D2D] font-bold rounded-xl transition"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleEditContactSubmit}
+                  className="px-4 py-2 bg-[#556B2F] hover:bg-[#556B2F]/90 text-white text-xs font-bold rounded-xl transition shadow-md shadow-[#556B2F]/10"
+                >
+                  حفظ التعديلات
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -31,11 +31,68 @@ export default function App() {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
-  const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
-  const [activeContact, setActiveContact] = useState<Contact | null>(INITIAL_CONTACTS[0]);
+  const [contacts, setContacts] = useState<Contact[]>(() => {
+    try {
+      const saved = localStorage.getItem('contacts_list');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_CONTACTS;
+  });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('currentUser_profile');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      name: 'عبدالله العتيبي',
+      avatar: '👤',
+      email: 'user@example.com',
+      avatarType: 'emoji' as 'emoji' | 'image_url',
+      avatarUrl: '',
+      isGoogleLinked: false,
+      googleEmail: '',
+    };
+  });
+
+  const [themeBackground, setThemeBackground] = useState(() => {
+    return localStorage.getItem('themeBackground_class') || 'bg_cream';
+  });
+
+  const [showHiddenContacts, setShowHiddenContacts] = useState(() => {
+    return localStorage.getItem('showHiddenContacts_state') === 'true';
+  });
+
+  const [activeContact, setActiveContact] = useState<Contact | null>(() => {
+    try {
+      const saved = localStorage.getItem('contacts_list');
+      const list = saved ? JSON.parse(saved) : INITIAL_CONTACTS;
+      return list[0] || null;
+    } catch (e) {
+      return INITIAL_CONTACTS[0] || null;
+    }
+  });
+
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [callHistory, setCallHistory] = useState<CallRecord[]>(INITIAL_CALL_RECORDS);
   const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts'>('chats');
+
+  // Persist states to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('contacts_list', JSON.stringify(contacts));
+  }, [contacts]);
+
+  useEffect(() => {
+    localStorage.setItem('currentUser_profile', JSON.stringify(currentUser));
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('themeBackground_class', themeBackground);
+  }, [themeBackground]);
+
+  useEffect(() => {
+    localStorage.setItem('showHiddenContacts_state', showHiddenContacts ? 'true' : 'false');
+  }, [showHiddenContacts]);
   
   // Responsive sidebar toggler for small screens
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -337,7 +394,16 @@ export default function App() {
     };
 
     window.addEventListener('addContact', handleAddContact);
-    return () => window.removeEventListener('addContact', handleAddContact);
+    
+    const handleGoogleOAuth = () => {
+      console.log('Google OAuth Flow initiated.');
+    };
+    window.addEventListener('triggerGoogleOAuth', handleGoogleOAuth);
+
+    return () => {
+      window.removeEventListener('addContact', handleAddContact);
+      window.removeEventListener('triggerGoogleOAuth', handleGoogleOAuth);
+    };
   }, []);
 
   // Format call duration for log saving
@@ -666,8 +732,18 @@ export default function App() {
     setSidebarOpen(false); // Auto close sidebar for mobile view screens
   };
 
+  const THEME_CLASSES: Record<string, string> = {
+    bg_cream: "bg-[#FAF9F6] text-[#2D2D2D]",
+    bg_olive: "bg-[#F0F2EB] text-[#2D2D2D]",
+    bg_lavender: "bg-[#F4F1F7] text-[#2D2D2D]",
+    bg_sakura: "bg-[#FAF5F6] text-[#2D2D2D]",
+    bg_cosmic: "bg-[#14121A] text-[#FAF9F6] dark-theme-active"
+  };
+
+  const currentBgClass = THEME_CLASSES[themeBackground] || THEME_CLASSES.bg_cream;
+
   return (
-    <div className="w-screen h-screen flex flex-col bg-[#FAF9F6] text-[#2D2D2D] overflow-hidden font-sans select-none" dir="rtl">
+    <div className={`w-screen h-screen flex flex-col ${currentBgClass} overflow-hidden font-sans select-none`} dir="rtl">
       
       {/* Top Main App Navigation Frame Bar */}
       <div className="bg-[#FAF9F6] p-3.5 border-b border-[#E5E1D8] flex items-center justify-between select-none px-4 shadow-sm shrink-0">
@@ -761,6 +837,13 @@ export default function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             onStartCall={handleStartCall}
+            currentUser={currentUser}
+            onUpdateCurrentUser={setCurrentUser}
+            themeBackground={themeBackground}
+            onUpdateThemeBackground={setThemeBackground}
+            showHiddenContacts={showHiddenContacts}
+            onToggleShowHiddenContacts={setShowHiddenContacts}
+            onUpdateContacts={setContacts}
           />
         </div>
 

@@ -8,6 +8,7 @@ export interface Contact {
   bio?: string;
   isGroup: boolean;
   members?: string[]; // Contact IDs in the group
+  visibility?: 'public' | 'hidden'; // Contact visibility status
 }
 
 export interface Message {
