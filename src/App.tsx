@@ -73,7 +73,39 @@ export default function App() {
     }
   });
 
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const savedContacts = localStorage.getItem('contacts_list');
+      const contactList: Contact[] = savedContacts ? JSON.parse(savedContacts) : INITIAL_CONTACTS;
+      
+      let allLoadedMessages: Message[] = [];
+      let hasAnySavedHistory = false;
+
+      contactList.forEach(contact => {
+        const savedHistory = localStorage.getItem(`chat_history_${contact.id}`);
+        if (savedHistory) {
+          allLoadedMessages.push(...JSON.parse(savedHistory));
+          hasAnySavedHistory = true;
+        } else {
+          // Load default messages for this contact from INITIAL_MESSAGES
+          const defaultMsgs = INITIAL_MESSAGES.filter(m => {
+            if (contact.isGroup) {
+              return m.id.startsWith(contact.id) || m.id.endsWith(contact.id);
+            } else {
+              return (m.senderId === contact.id && !m.id.includes('group_')) || 
+                     (m.senderId === 'me' && m.id.includes(`_${contact.id}`));
+            }
+          });
+          allLoadedMessages.push(...defaultMsgs);
+        }
+      });
+
+      return allLoadedMessages.length > 0 ? allLoadedMessages : INITIAL_MESSAGES;
+    } catch (e) {
+      return INITIAL_MESSAGES;
+    }
+  });
+
   const [callHistory, setCallHistory] = useState<CallRecord[]>(INITIAL_CALL_RECORDS);
   const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts'>('chats');
 
@@ -81,6 +113,21 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('contacts_list', JSON.stringify(contacts));
   }, [contacts]);
+
+  // Save chat history per contact individually when messages or contacts list change
+  useEffect(() => {
+    contacts.forEach(contact => {
+      const contactMsgs = messages.filter(m => {
+        if (contact.isGroup) {
+          return m.id.startsWith(contact.id) || m.id.endsWith(contact.id);
+        } else {
+          return (m.senderId === contact.id && !m.id.includes('group_')) || 
+                 (m.senderId === 'me' && m.id.includes(`_${contact.id}`));
+        }
+      });
+      localStorage.setItem(`chat_history_${contact.id}`, JSON.stringify(contactMsgs));
+    });
+  }, [messages, contacts]);
 
   useEffect(() => {
     localStorage.setItem('currentUser_profile', JSON.stringify(currentUser));
