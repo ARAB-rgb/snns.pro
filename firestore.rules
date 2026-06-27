@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable, hardened global helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validation helpers
+    function isValidContact(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && data.avatar is string && data.avatar.size() <= 100
+        && data.status is string && data.status.size() <= 50
+        && data.role is string && data.role.size() <= 200
+        && data.isGroup is bool;
+    }
+
+    function isValidMessage(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.senderId is string && data.senderId.size() <= 128
+        && data.senderName is string && data.senderName.size() <= 200
+        && data.text is string && data.text.size() <= 10000
+        && data.timestamp is string && data.timestamp.size() <= 100
+        && data.type is string && data.type.size() <= 50
+        && data.status is string && data.status.size() <= 50;
+    }
+
+    function isValidCall(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.contactId is string && data.contactId.size() <= 128
+        && data.type is string && data.type.size() <= 50
+        && data.direction is string && data.direction.size() <= 50
+        && data.timestamp is string && data.timestamp.size() <= 100;
+    }
+
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && data.avatar is string && data.avatar.size() <= 100
+        && data.avatarType is string && data.avatarType.size() <= 50;
+    }
+
+    // Collection match blocks
+    match /contacts/{contactId} {
+      allow read: if true;
+      allow create, update: if isValidId(contactId) && isValidContact(incoming());
+      allow delete: if isValidId(contactId);
+    }
+
+    match /messages/{messageId} {
+      allow read: if true;
+      allow create, update: if isValidId(messageId) && isValidMessage(incoming());
+      allow delete: if isValidId(messageId);
+    }
+
+    match /calls/{callId} {
+      allow read: if true;
+      allow create, update: if isValidId(callId) && isValidCall(incoming());
+      allow delete: if isValidId(callId);
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isValidId(userId) && isValidUser(incoming());
+      allow delete: if isValidId(userId);
+    }
+  }
+}

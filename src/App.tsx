@@ -6,6 +6,16 @@ import ChatArea from './components/ChatArea';
 import VideoCallScreen from './components/VideoCallScreen';
 import { sounds } from './utils/audio';
 import { 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot, 
+  writeBatch 
+} from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from './lib/firebase';
+import { 
   Menu, 
   MessageSquare, 
   Phone, 
@@ -14,7 +24,9 @@ import {
   VolumeX, 
   Activity,
   Smartphone,
-  Laptop
+  Laptop,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 export default function App() {
@@ -31,20 +43,11 @@ export default function App() {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
-  const [contacts, setContacts] = useState<Contact[]>(() => {
-    try {
-      const saved = localStorage.getItem('contacts_list');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return INITIAL_CONTACTS;
-  });
+  const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
 
   const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('currentUser_profile');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
     return {
+      id: 'main_profile',
       name: 'عبدالله العتيبي',
       avatar: '👤',
       email: 'user@example.com',
@@ -52,6 +55,7 @@ export default function App() {
       avatarUrl: '',
       isGoogleLinked: false,
       googleEmail: '',
+      status: 'online' as 'online' | 'offline' | 'away'
     };
   });
 
@@ -63,75 +67,131 @@ export default function App() {
     return localStorage.getItem('showHiddenContacts_state') === 'true';
   });
 
-  const [activeContact, setActiveContact] = useState<Contact | null>(() => {
-    try {
-      const saved = localStorage.getItem('contacts_list');
-      const list = saved ? JSON.parse(saved) : INITIAL_CONTACTS;
-      return list[0] || null;
-    } catch (e) {
-      return INITIAL_CONTACTS[0] || null;
-    }
-  });
+  const [activeContact, setActiveContact] = useState<Contact | null>(INITIAL_CONTACTS[0] || null);
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    try {
-      const savedContacts = localStorage.getItem('contacts_list');
-      const contactList: Contact[] = savedContacts ? JSON.parse(savedContacts) : INITIAL_CONTACTS;
-      
-      let allLoadedMessages: Message[] = [];
-      let hasAnySavedHistory = false;
-
-      contactList.forEach(contact => {
-        const savedHistory = localStorage.getItem(`chat_history_${contact.id}`);
-        if (savedHistory) {
-          allLoadedMessages.push(...JSON.parse(savedHistory));
-          hasAnySavedHistory = true;
-        } else {
-          // Load default messages for this contact from INITIAL_MESSAGES
-          const defaultMsgs = INITIAL_MESSAGES.filter(m => {
-            if (contact.isGroup) {
-              return m.id.startsWith(contact.id) || m.id.endsWith(contact.id);
-            } else {
-              return (m.senderId === contact.id && !m.id.includes('group_')) || 
-                     (m.senderId === 'me' && m.id.includes(`_${contact.id}`));
-            }
-          });
-          allLoadedMessages.push(...defaultMsgs);
-        }
-      });
-
-      return allLoadedMessages.length > 0 ? allLoadedMessages : INITIAL_MESSAGES;
-    } catch (e) {
-      return INITIAL_MESSAGES;
-    }
-  });
+  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
 
   const [callHistory, setCallHistory] = useState<CallRecord[]>(INITIAL_CALL_RECORDS);
   const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts'>('chats');
 
-  // Persist states to localStorage when changed
-  useEffect(() => {
-    localStorage.setItem('contacts_list', JSON.stringify(contacts));
-  }, [contacts]);
+  // Firebase Firestore Real-Time Subscriptions & Auto-Seeding
+  const [dbConnected, setDbConnected] = useState(false);
 
-  // Save chat history per contact individually when messages or contacts list change
   useEffect(() => {
-    contacts.forEach(contact => {
-      const contactMsgs = messages.filter(m => {
-        if (contact.isGroup) {
-          return m.id.startsWith(contact.id) || m.id.endsWith(contact.id);
-        } else {
-          return (m.senderId === contact.id && !m.id.includes('group_')) || 
-                 (m.senderId === 'me' && m.id.includes(`_${contact.id}`));
-        }
-      });
-      localStorage.setItem(`chat_history_${contact.id}`, JSON.stringify(contactMsgs));
+    // A. Sync Current User Profile
+    const userDocRef = doc(db, 'users', 'main_profile');
+    const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const userData = snapshot.data();
+        setCurrentUser(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(userData)) {
+            return userData as any;
+          }
+          return prev;
+        });
+      } else {
+        const defaultProfile = {
+          id: 'main_profile',
+          name: 'عبدالله العتيبي',
+          avatar: '👤',
+          email: 'user@example.com',
+          avatarType: 'emoji',
+          avatarUrl: '',
+          isGoogleLinked: false,
+          googleEmail: '',
+          status: 'online'
+        };
+        setDoc(userDocRef, defaultProfile).catch(err => {
+          handleFirestoreError(err, OperationType.WRITE, 'users/main_profile');
+        });
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'users/main_profile');
     });
-  }, [messages, contacts]);
 
-  useEffect(() => {
-    localStorage.setItem('currentUser_profile', JSON.stringify(currentUser));
-  }, [currentUser]);
+    // B. Sync Contacts
+    const contactsColRef = collection(db, 'contacts');
+    const unsubscribeContacts = onSnapshot(contactsColRef, async (snapshot) => {
+      if (snapshot.empty) {
+        try {
+          const batch = writeBatch(db);
+          INITIAL_CONTACTS.forEach((contact) => {
+            const docRef = doc(db, 'contacts', contact.id);
+            batch.set(docRef, contact);
+          });
+          await batch.commit();
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, 'contacts');
+        }
+      } else {
+        const list: Contact[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as Contact);
+        });
+        setContacts(list);
+        setDbConnected(true);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'contacts');
+    });
+
+    // C. Sync Messages
+    const messagesColRef = collection(db, 'messages');
+    const unsubscribeMessages = onSnapshot(messagesColRef, async (snapshot) => {
+      if (snapshot.empty) {
+        try {
+          const batch = writeBatch(db);
+          INITIAL_MESSAGES.forEach((msg) => {
+            const docRef = doc(db, 'messages', msg.id);
+            batch.set(docRef, msg);
+          });
+          await batch.commit();
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, 'messages');
+        }
+      } else {
+        const list: Message[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as Message);
+        });
+        setMessages(list);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'messages');
+    });
+
+    // D. Sync Calls
+    const callsColRef = collection(db, 'calls');
+    const unsubscribeCalls = onSnapshot(callsColRef, async (snapshot) => {
+      if (snapshot.empty) {
+        try {
+          const batch = writeBatch(db);
+          INITIAL_CALL_RECORDS.forEach((call) => {
+            const docRef = doc(db, 'calls', call.id);
+            batch.set(docRef, call);
+          });
+          await batch.commit();
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, 'calls');
+        }
+      } else {
+        const list: CallRecord[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as CallRecord);
+        });
+        setCallHistory(list);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'calls');
+    });
+
+    return () => {
+      unsubscribeUser();
+      unsubscribeContacts();
+      unsubscribeMessages();
+      unsubscribeCalls();
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('themeBackground_class', themeBackground);
@@ -140,6 +200,52 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('showHiddenContacts_state', showHiddenContacts ? 'true' : 'false');
   }, [showHiddenContacts]);
+
+  // Network connection state
+  const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isSimulatedOffline, setIsSimulatedOffline] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setToastType('success');
+      setToastMessage('🟢 تم استعادة الاتصال بالشبكة بنجاح!');
+      const timer = setTimeout(() => setToastMessage(null), 4000);
+      return () => clearTimeout(timer);
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setToastType('error');
+      setToastMessage('🔴 انقطع الاتصال بالشبكة! تم تفعيل وضع عدم الاتصال.');
+      const timer = setTimeout(() => setToastMessage(null), 5000);
+      return () => clearTimeout(timer);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const toggleSimulateOffline = () => {
+    setIsSimulatedOffline((prev) => {
+      const nextState = !prev;
+      setToastType(nextState ? 'error' : 'success');
+      setToastMessage(
+        nextState 
+          ? '🔴 تم قطع الاتصال بالشبكة (وضع المحاكاة نشط).' 
+          : '🟢 تم استعادة الاتصال بالشبكة بنجاح!'
+      );
+      setTimeout(() => setToastMessage(null), 4000);
+      return nextState;
+    });
+  };
   
   // Responsive sidebar toggler for small screens
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -475,16 +581,21 @@ export default function App() {
       text,
       timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
       type,
-      mediaUrl: extra.mediaUrl,
-      duration: extra.duration,
-      fileName: extra.fileName,
-      fileSize: extra.fileSize,
+      mediaUrl: extra.mediaUrl || '',
+      duration: extra.duration || 0,
+      fileName: extra.fileName || '',
+      fileSize: extra.fileSize || '',
       status: 'sent',
     };
 
-    // Update message state
+    // Update message state & write to Firestore
     setMessages((prev) => [...prev, newMsg]);
     sounds.playMessageSentSound();
+    try {
+      await setDoc(doc(db, 'messages', newMsg.id), newMsg);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `messages/${newMsg.id}`);
+    }
 
     // If in real-time room mode, broadcast over WebSockets and block AI response simulation
     if (roomId && activeContact.id === 'peer') {
@@ -503,10 +614,15 @@ export default function App() {
       return;
     }
 
-    // Trigger typing response simulation
+    // Trigger typing response simulation & write to Firestore
     setContacts((prev) =>
       prev.map((c) => (c.id === activeContact.id ? { ...c, status: 'typing' } : c))
     );
+    try {
+      await updateDoc(doc(db, 'contacts', activeContact.id), { status: 'typing' });
+    } catch (err) {
+      // Non-blocking fallback if custom contact doesn't exist yet
+    }
 
     // Simulate standard WhatsApp network delay for realism
     setTimeout(async () => {
@@ -565,16 +681,71 @@ export default function App() {
 
         setMessages((prev) => [...prev, replyMsg]);
         sounds.playMessageReceivedSound();
+        try {
+          await setDoc(doc(db, 'messages', replyMsg.id), replyMsg);
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, `messages/${replyMsg.id}`);
+        }
 
       } catch (error) {
         console.error("Error receiving reply:", error);
       } finally {
-        // Set contact back to online
+        // Set contact back to online & write to Firestore
         setContacts((prev) =>
           prev.map((c) => (c.id === activeContact.id ? { ...c, status: 'online' } : c))
         );
+        try {
+          await updateDoc(doc(db, 'contacts', activeContact.id), { status: 'online' });
+        } catch (err) {
+          // Non-blocking
+        }
       }
     }, 2500);
+  };
+
+  // Firestore Data Manipulation Helper handlers
+  const handleUpdateCurrentUser = async (updated: any) => {
+    try {
+      await setDoc(doc(db, 'users', 'main_profile'), updated);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'users/main_profile');
+    }
+  };
+
+  const handleUpdateContacts = async (updatedList: Contact[]) => {
+    try {
+      const updatedIds = new Set(updatedList.map(c => c.id));
+      const deletedContacts = contacts.filter(c => !updatedIds.has(c.id));
+      
+      const batch = writeBatch(db);
+      updatedList.forEach(contact => {
+        const docRef = doc(db, 'contacts', contact.id);
+        batch.set(docRef, contact);
+      });
+      deletedContacts.forEach(contact => {
+        const docRef = doc(db, 'contacts', contact.id);
+        batch.delete(docRef);
+      });
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'contacts');
+    }
+  };
+
+  const saveCallRecordToFirestore = async (newRecord: CallRecord) => {
+    try {
+      await setDoc(doc(db, 'calls', newRecord.id), newRecord);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `calls/${newRecord.id}`);
+    }
+  };
+
+  const updateCallDurationInFirestore = async (recordId: string, durationStr: string) => {
+    try {
+      await updateDoc(doc(db, 'calls', recordId), { duration: durationStr });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `calls/${recordId}`);
+    }
   };
 
   // Start outbound call (e.g. User clicks Call icon)
@@ -618,7 +789,7 @@ export default function App() {
             direction: 'outgoing',
             timestamp: `اليوم، ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`,
           };
-          setCallHistory((history) => [newRecord, ...history]);
+          saveCallRecordToFirestore(newRecord);
           return { ...prev, status: 'connected' };
         }
         return prev;
@@ -656,7 +827,7 @@ export default function App() {
       direction: 'incoming',
       timestamp: `اليوم، ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`,
     };
-    setCallHistory((prev) => [newRecord, ...prev]);
+    saveCallRecordToFirestore(newRecord);
 
     setCallState((prev) => ({
       ...prev,
@@ -691,7 +862,7 @@ export default function App() {
         direction: 'missed',
         timestamp: `اليوم، ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`,
       };
-      setCallHistory((prev) => [newRecord, ...prev]);
+      saveCallRecordToFirestore(newRecord);
     }
 
     if (isPeer) {
@@ -724,18 +895,10 @@ export default function App() {
     const activeSecs = callState.duration;
 
     // Update the last call record with active duration details
-    if (callState.contact && activeSecs > 0) {
-      setCallHistory((prev) => {
-        if (prev.length > 0) {
-          const updated = [...prev];
-          updated[0] = {
-            ...updated[0],
-            duration: formatCallDuration(activeSecs),
-          };
-          return updated;
-        }
-        return prev;
-      });
+    if (callState.contact && activeSecs > 0 && callHistory.length > 0) {
+      const lastRecordId = callHistory[0].id;
+      const durationStr = formatCallDuration(activeSecs);
+      updateCallDurationInFirestore(lastRecordId, durationStr);
     }
 
     if (isPeer) {
@@ -845,6 +1008,21 @@ export default function App() {
           </div>
 
           <button 
+            onClick={toggleSimulateOffline}
+            className={`p-2.5 rounded-xl border transition-colors flex items-center gap-1.5 ${
+              isSimulatedOffline || !isOnline
+                ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100/50'
+                : 'bg-[#556B2F]/10 border-[#556B2F]/30 text-[#556B2F] hover:bg-[#556B2F]/20'
+            }`}
+            title={(isSimulatedOffline || !isOnline) ? "محاكاة إعادة الاتصال بالشبكة" : "محاكاة قطع الاتصال بالشبكة"}
+          >
+            {isSimulatedOffline || !isOnline ? <WifiOff className="w-4 h-4 text-rose-600" /> : <Wifi className="w-4 h-4 text-[#556B2F]" />}
+            <span className="text-[10px] font-extrabold hidden md:inline">
+              {isSimulatedOffline || !isOnline ? 'منقطع' : 'متصل بالشبكة'}
+            </span>
+          </button>
+
+          <button 
             onClick={() => setSoundEnabled(!soundEnabled)}
             className={`p-2.5 rounded-xl border transition-colors ${
               soundEnabled 
@@ -867,6 +1045,57 @@ export default function App() {
         </div>
       </div>
 
+      {/* Network Status Banner */}
+      {(!isOnline || isSimulatedOffline) && (
+        <div className="bg-gradient-to-r from-amber-600 to-rose-600 text-white px-4 py-2.5 flex items-center justify-between shadow-md transition-all duration-300 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <WifiOff className="w-5 h-5 text-amber-200 animate-pulse shrink-0" />
+            <div className="text-right">
+              <span className="font-extrabold text-xs sm:text-sm">وضع عدم الاتصال بالشبكة نشط حالياً</span>
+              <p className="text-[10px] sm:text-xs text-amber-100 font-medium">بعض الميزات المباشرة مثل مكالمات WebRTC والمزامنة الحية قد لا تعمل حتى تتم إعادة الاتصال بالشبكة.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              if (isSimulatedOffline) {
+                toggleSimulateOffline();
+              } else {
+                alert("يرجى التحقق من اتصال الإنترنت لجهازك لإعادة الاتصال تلقائياً.");
+              }
+            }}
+            className="bg-white/15 hover:bg-white/25 active:bg-white/30 text-white text-[11px] font-extrabold px-3 py-1.5 rounded-lg transition-colors border border-white/20 whitespace-nowrap"
+          >
+            {isSimulatedOffline ? 'إعادة الاتصال (إنهاء المحاكاة)' : 'فحص الاتصال'}
+          </button>
+        </div>
+      )}
+
+      {/* Toast Notification Container */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-6 z-50 max-w-sm">
+          <div className={`p-4 rounded-xl shadow-2xl border flex items-center gap-3 transition-all duration-300 ${
+            toastType === 'success' 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+              : toastType === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <div className="text-lg shrink-0">
+              {toastType === 'success' ? '✨' : toastType === 'error' ? '⚠️' : 'ℹ️'}
+            </div>
+            <div className="flex-1 text-right">
+              <p className="text-xs font-extrabold">{toastMessage}</p>
+            </div>
+            <button 
+              onClick={() => setToastMessage(null)}
+              className="text-[10px] font-bold text-gray-500 hover:text-gray-700 px-1.5 py-0.5 rounded-md hover:bg-gray-100 shrink-0"
+            >
+              إغلاق
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Workspace Frame */}
       <div className="flex-1 flex overflow-hidden relative">
         
@@ -885,12 +1114,12 @@ export default function App() {
             setActiveTab={setActiveTab}
             onStartCall={handleStartCall}
             currentUser={currentUser}
-            onUpdateCurrentUser={setCurrentUser}
+            onUpdateCurrentUser={handleUpdateCurrentUser}
             themeBackground={themeBackground}
             onUpdateThemeBackground={setThemeBackground}
             showHiddenContacts={showHiddenContacts}
             onToggleShowHiddenContacts={setShowHiddenContacts}
-            onUpdateContacts={setContacts}
+            onUpdateContacts={handleUpdateContacts}
           />
         </div>
 

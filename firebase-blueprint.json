@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "contacts": {
+      "title": "Contact",
+      "description": "Represents a chat contact",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "avatar": { "type": "string" },
+        "status": { "type": "string", "enum": ["online", "offline", "typing", "away"] },
+        "lastSeen": { "type": "string" },
+        "role": { "type": "string" },
+        "bio": { "type": "string" },
+        "isGroup": { "type": "boolean" },
+        "members": { "type": "array" },
+        "visibility": { "type": "string", "enum": ["public", "hidden"] }
+      },
+      "required": ["id", "name", "avatar", "status", "role", "isGroup"]
+    },
+    "messages": {
+      "title": "Message",
+      "description": "Represents a chat message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "image", "voice", "file"] },
+        "mediaUrl": { "type": "string" },
+        "duration": { "type": "number" },
+        "fileName": { "type": "string" },
+        "fileSize": { "type": "string" },
+        "status": { "type": "string", "enum": ["sent", "delivered", "read"] }
+      },
+      "required": ["id", "senderId", "senderName", "text", "timestamp", "type", "status"]
+    },
+    "calls": {
+      "title": "CallRecord",
+      "description": "Represents a call history record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "contactId": { "type": "string" },
+        "type": { "type": "string", "enum": ["video", "audio"] },
+        "direction": { "type": "string", "enum": ["incoming", "outgoing", "missed"] },
+        "timestamp": { "type": "string" },
+        "duration": { "type": "string" }
+      },
+      "required": ["id", "contactId", "type", "direction", "timestamp"]
+    },
+    "users": {
+      "title": "UserProfile",
+      "description": "Represents the current user's profile settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "avatar": { "type": "string" },
+        "email": { "type": "string" },
+        "avatarType": { "type": "string", "enum": ["emoji", "image_url"] },
+        "avatarUrl": { "type": "string" },
+        "isGoogleLinked": { "type": "boolean" },
+        "googleEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["online", "offline", "away"] }
+      },
+      "required": ["id", "name", "avatar", "avatarType"]
+    }
+  },
+  "firestore": {
+    "/contacts/{contactId}": {
+      "schema": "contacts",
+      "description": "Collection of chat contacts"
+    },
+    "/messages/{messageId}": {
+      "schema": "messages",
+      "description": "Collection of sent/received messages"
+    },
+    "/calls/{callId}": {
+      "schema": "calls",
+      "description": "Collection of call records"
+    },
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "Collection of user profiles"
+    }
+  }
+}

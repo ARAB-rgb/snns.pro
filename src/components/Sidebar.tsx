@@ -47,6 +47,7 @@ interface SidebarProps {
     avatarUrl?: string;
     isGoogleLinked?: boolean;
     googleEmail?: string;
+    status?: 'online' | 'offline' | 'away';
   };
   onUpdateCurrentUser: (user: any) => void;
   themeBackground: string;
@@ -162,6 +163,7 @@ export default function Sidebar({
   const [editAvatarType, setEditAvatarType] = useState<'emoji' | 'image_url'>(currentUser.avatarType || 'emoji');
   const [editAvatarEmoji, setEditAvatarEmoji] = useState(currentUser.avatar);
   const [editAvatarUrl, setEditAvatarUrl] = useState(currentUser.avatarUrl || '');
+  const [editUserStatus, setEditUserStatus] = useState<'online' | 'offline' | 'away'>(currentUser.status || 'online');
 
   // Privacy Pin states
   const [privacyPinInput, setPrivacyPinInput] = useState('');
@@ -173,6 +175,7 @@ export default function Sidebar({
     setEditAvatarType(currentUser.avatarType || 'emoji');
     setEditAvatarEmoji(currentUser.avatar);
     setEditAvatarUrl(currentUser.avatarUrl || '');
+    setEditUserStatus(currentUser.status || 'online');
   }, [currentUser, showSettingsModal]);
 
   // Helper to render user avatar beautifully
@@ -494,7 +497,8 @@ export default function Sidebar({
       name: editUsername,
       avatar: editAvatarEmoji,
       avatarType: editAvatarType,
-      avatarUrl: editAvatarUrl
+      avatarUrl: editAvatarUrl,
+      status: editUserStatus
     });
     setShowSettingsModal(false);
     alert("⚙️ تم حفظ تعديلات الملف الشخصي بنجاح.");
@@ -508,7 +512,13 @@ export default function Sidebar({
         <div className="flex items-center gap-3">
           <div className="relative cursor-pointer" onClick={() => setShowSettingsModal(true)} title="الملف الشخصي والإعدادات">
             {renderUserAvatar()}
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#556B2F] border-2 border-[#F2F0E9] rounded-full"></span>
+            <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-[#F2F0E9] rounded-full ${
+              currentUser.status === 'offline' 
+                ? 'bg-gray-400' 
+                : currentUser.status === 'away' 
+                  ? 'bg-amber-500' 
+                  : 'bg-[#556B2F]'
+            }`}></span>
           </div>
           <div className="text-right">
             <h2 className="font-semibold text-sm text-[#2D2D2D] flex items-center gap-1.5 cursor-pointer hover:text-[#556B2F]" onClick={() => setShowSettingsModal(true)}>
@@ -520,7 +530,11 @@ export default function Sidebar({
               )}
             </h2>
             <p className="text-[10px] text-[#A8A293] font-medium truncate max-w-[150px]">
-              {currentUser.isGoogleLinked ? currentUser.googleEmail : 'متصل (جوال + كمبيوتر)'}
+              {currentUser.status === 'offline' 
+                ? 'غير متاح' 
+                : currentUser.status === 'away' 
+                  ? 'خارج (بعيد)' 
+                  : (currentUser.isGoogleLinked ? currentUser.googleEmail : 'متصل (جوال + كمبيوتر)')}
             </p>
           </div>
         </div>
@@ -874,6 +888,48 @@ export default function Sidebar({
                     className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
                     placeholder="أدخل اسمك الكريم"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">حالة التواجد (الحالة الشخصية):</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditUserStatus('online')}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-1.5 ${
+                        editUserStatus === 'online' 
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-800 font-extrabold ring-1 ring-emerald-500' 
+                          : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 bg-[#556B2F] rounded-full"></span>
+                      <span>متصل</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditUserStatus('away')}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-1.5 ${
+                        editUserStatus === 'away' 
+                          ? 'bg-amber-50 border-amber-500 text-amber-800 font-extrabold ring-1 ring-amber-500' 
+                          : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+                      <span>خارج</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditUserStatus('offline')}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-1.5 ${
+                        editUserStatus === 'offline' 
+                          ? 'bg-gray-50 border-gray-400 text-gray-800 font-extrabold ring-1 ring-gray-400' 
+                          : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 bg-gray-400 rounded-full"></span>
+                      <span>غير متاح</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div>
