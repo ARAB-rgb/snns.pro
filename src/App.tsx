@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import VideoCallScreen from './components/VideoCallScreen';
 import LoginScreen from './components/LoginScreen';
+import AdminPanel from './components/AdminPanel';
 import { sounds } from './utils/audio';
 import { 
   collection, 
@@ -93,6 +94,7 @@ export default function App() {
 
   const [callHistory, setCallHistory] = useState<CallRecord[]>(INITIAL_CALL_RECORDS);
   const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts'>('chats');
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Firebase Firestore Real-Time Subscriptions & Auto-Seeding
   const [dbConnected, setDbConnected] = useState(false);
@@ -1108,6 +1110,17 @@ export default function App() {
             </button>
           )}
 
+          {/* Admin Control Center Trigger */}
+          {(currentUser.id === '1007363904' || currentUser.id === '139213' || currentUser.name?.includes('الأدمن') || currentUser.role?.includes('الأدمن')) && (
+            <button
+              onClick={() => setShowAdminPanel(true)}
+              className="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-black px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer border border-amber-500/30"
+              title="فتح لوحة تحكم الرقابة والمراقبة التامة (خاص بالأدمن)"
+            >
+              🛡️ لوحة الرقابة والتحكم
+            </button>
+          )}
+
           <div className="hidden lg:flex items-center gap-2 bg-[#F2F0E9] px-3 py-1.5 rounded-xl border border-[#E5E1D8] text-xs">
             <Laptop className="w-3.5 h-3.5 text-[#556B2F]" />
             <span className="text-[#2D2D2D] font-medium">سطح المكتب</span>
@@ -1242,6 +1255,7 @@ export default function App() {
             onBackToSidebar={() => setSidebarOpen(true)}
             isRealMode={!!roomId}
             roomId={roomId || undefined}
+            currentUser={currentUser as any}
           />
         </div>
       </div>
@@ -1259,6 +1273,15 @@ export default function App() {
         remoteStreamFromParent={remoteStream || undefined}
         isRealMode={!!roomId}
       />
+
+      {/* ADMIN CONTROL PANEL OVERLAY */}
+      {showAdminPanel && (
+        <AdminPanel
+          currentUser={currentUser as any}
+          onClose={() => setShowAdminPanel(false)}
+          contacts={contacts}
+        />
+      )}
 
     </div>
   );

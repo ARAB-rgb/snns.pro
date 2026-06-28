@@ -17,9 +17,12 @@ import {
   Play, 
   Pause, 
   X,
-  Volume2
+  Volume2,
+  AlertTriangle
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
+import { db } from '../lib/firebase';
+import { collection, doc, setDoc } from 'firebase/firestore';
 
 interface ChatAreaProps {
   activeContact: Contact | null;
@@ -29,6 +32,13 @@ interface ChatAreaProps {
   onBackToSidebar: () => void; // for responsive mobile view
   isRealMode?: boolean;
   roomId?: string | null;
+  currentUser: {
+    id: string;
+    name: string;
+    avatar: string;
+    email: string;
+    role: string;
+  };
 }
 
 export interface WallpaperOption {
@@ -54,7 +64,8 @@ export default function ChatArea({
   onStartCall,
   onBackToSidebar,
   isRealMode = false,
-  roomId = null
+  roomId = null,
+  currentUser
 }: ChatAreaProps) {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -66,6 +77,11 @@ export default function ChatArea({
   const [isUsingSimulation, setIsUsingSimulation] = useState(false);
   const [chatWallpaper, setChatWallpaper] = useState(() => localStorage.getItem('chatWallpaper') || 'olive');
   const [showWallpaperMenu, setShowWallpaperMenu] = useState(false);
+  
+  // States for complaint/report center
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [complaintText, setComplaintText] = useState('');
+  const [submittingComplaint, setSubmittingComplaint] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recordTimerRef = useRef<any>(null);
@@ -168,6 +184,35 @@ export default function ChatArea({
              (m.senderId === 'me' && m.id.includes(`_${activeContact.id}`));
     }
   });
+
+  const handleSendComplaint = async () => {
+    if (!complaintText.trim()) {
+      alert('يرجى كتابة تفاصيل الشكوى أو البلاغ أولاً.');
+      return;
+    }
+    setSubmittingComplaint(true);
+    try {
+      const complaintId = `complaint_${Date.now()}`;
+      const complaintsCol = collection(db, 'complaints');
+      await setDoc(doc(complaintsCol, complaintId), {
+        id: complaintId,
+        text: complaintText,
+        userId: currentUser.id || 'anonymous',
+        userName: currentUser.name || 'مستعمل مجهول',
+        userEmail: currentUser.email || '',
+        status: 'pending',
+        timestamp: new Date().toISOString()
+      });
+      alert('✨ تم تقديم الشكوى/البلاغ للإدارة بنجاح وجاري تدقيقه وحسمه من المشرفين.');
+      setComplaintText('');
+      setShowComplaintModal(false);
+    } catch (err: any) {
+      console.error(err);
+      alert(`⚠️ خطأ أثناء تقديم البلاغ: ${err.message || String(err)}`);
+    } finally {
+      setSubmittingComplaint(false);
+    }
+  };
 
   const handleSend = () => {
     if (!inputText.trim()) return;
@@ -438,6 +483,16 @@ export default function ChatArea({
               </div>
             )}
           </div>
+
+          {/* Submit Complaint Button */}
+          <button
+            onClick={() => setShowComplaintModal(true)}
+            className="p-2.5 hover:bg-rose-50 rounded-xl text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-1 border border-rose-200 bg-rose-50/30 shadow-sm cursor-pointer animate-pulse"
+            title="تقديم شكوى أو بلاغ عن محتوى مسيء"
+          >
+            <AlertTriangle className="w-4 h-4 text-rose-600" />
+            <span className="text-xs font-bold hidden md:inline">تقديم بلاغ 🛡️</span>
+          </button>
         </div>
       </div>
 
@@ -758,6 +813,51 @@ export default function ChatArea({
           </div>
         )}
       </div>
+
+      {/* Complaint / Report Modal */}
+      {showComplaintModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" dir="rtl">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-stone-100 shadow-2xl space-y-4 animate-scaleIn text-right">
+            <div className="flex items-center gap-2 text-rose-600">
+              <AlertTriangle className="w-5 h-5 animate-bounce" />
+              <h3 className="font-extrabold text-base">تقديم بلاغ رسمي للإدارة والمشرفين</h3>
+            </div>
+            <p className="text-xs text-[#A8A293] leading-relaxed">
+              إذا واجهت أي محتوى مسيء، إزعاج، أو سلوك غير لائق من جهة اتصال، يرجى ملء التفاصيل أدناه. سيقوم الأدمن والمسؤولون بمراجعة شكواك فوراً واتخاذ الإجراءات اللازمة.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-stone-500 block">تفاصيل الشكوى أو الإساءة:</label>
+              <textarea
+                value={complaintText}
+                onChange={(e) => setComplaintText(e.target.value)}
+                placeholder="اكتب هنا بوضوح سبب الشكوى، التفاصيل، أو الرابط المسيء..."
+                rows={4}
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-rose-500 focus:border-rose-500 transition-all resize-none"
+              />
+            </div>
+            <div className="flex gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={handleSendComplaint}
+                disabled={submittingComplaint}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {submittingComplaint ? 'جاري التقديم...' : 'تقديم البلاغ فورا 🛡️'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setComplaintText('');
+                  setShowComplaintModal(false);
+                }}
+                className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
