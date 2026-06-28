@@ -4,6 +4,7 @@ import { INITIAL_CONTACTS, INITIAL_MESSAGES, INITIAL_CALL_RECORDS } from './data
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import VideoCallScreen from './components/VideoCallScreen';
+import LoginScreen from './components/LoginScreen';
 import { sounds } from './utils/audio';
 import { 
   collection, 
@@ -15,6 +16,7 @@ import {
   writeBatch 
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './lib/firebase';
+import { syncUserToSupabase, syncMessageToSupabase, syncCallToSupabase } from './lib/supabase';
 import { 
   Menu, 
   MessageSquare, 
@@ -45,17 +47,30 @@ export default function App() {
 
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
 
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('isLoggedIn_state') === 'true';
+  });
+
   const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('currentUser_profile');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // Fallback
+      }
+    }
     return {
-      id: 'main_profile',
-      name: 'عبدالله العتيبي',
+      id: '',
+      name: '',
       avatar: '👤',
-      email: 'user@example.com',
+      email: '',
       avatarType: 'emoji' as 'emoji' | 'image_url',
       avatarUrl: '',
       isGoogleLinked: false,
       googleEmail: '',
-      status: 'online' as 'online' | 'offline' | 'away'
+      status: 'offline' as 'online' | 'offline' | 'away',
+      role: ''
     };
   });
 
@@ -78,37 +93,34 @@ export default function App() {
   const [dbConnected, setDbConnected] = useState(false);
 
   useEffect(() => {
+    if (!currentUser.id) return;
     // A. Sync Current User Profile
-    const userDocRef = doc(db, 'users', 'main_profile');
+    const userDocRef = doc(db, 'users', currentUser.id);
     const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
       if (snapshot.exists()) {
         const userData = snapshot.data();
         setCurrentUser(prev => {
           if (JSON.stringify(prev) !== JSON.stringify(userData)) {
-            return userData as any;
+            return { ...prev, ...userData } as any;
           }
           return prev;
         });
       } else {
-        const defaultProfile = {
-          id: 'main_profile',
-          name: 'عبدالله العتيبي',
-          avatar: '👤',
-          email: 'user@example.com',
-          avatarType: 'emoji',
-          avatarUrl: '',
-          isGoogleLinked: false,
-          googleEmail: '',
-          status: 'online'
-        };
-        setDoc(userDocRef, defaultProfile).catch(err => {
-          handleFirestoreError(err, OperationType.WRITE, 'users/main_profile');
+        // Create initial profile in Firestore for new user if it doesn't exist
+        setDoc(userDocRef, currentUser).catch(err => {
+          handleFirestoreError(err, OperationType.WRITE, `users/${currentUser.id}`);
         });
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'users/main_profile');
+      handleFirestoreError(error, OperationType.GET, `users/${currentUser.id}`);
     });
 
+    return () => {
+      unsubscribeUser();
+    };
+  }, [currentUser.id]);
+
+  useEffect(() => {
     // B. Sync Contacts
     const contactsColRef = collection(db, 'contacts');
     const unsubscribeContacts = onSnapshot(contactsColRef, async (snapshot) => {
@@ -128,6 +140,25 @@ export default function App() {
         snapshot.forEach((doc) => {
           list.push(doc.data() as Contact);
         });
+
+        // Ensure new admin contacts are written to Firestore if not already present
+        const hasAdmin1 = list.some((c) => c.id === '1007363904');
+        const hasAdmin2 = list.some((c) => c.id === '139213');
+        if (!hasAdmin1 || !hasAdmin2) {
+          try {
+            const batch = writeBatch(db);
+            INITIAL_CONTACTS.forEach((contact) => {
+              if (contact.id === '1007363904' || contact.id === '139213') {
+                const docRef = doc(db, 'contacts', contact.id);
+                batch.set(docRef, contact);
+              }
+            });
+            batch.commit().catch(err => console.error("Batch commit failed", err));
+          } catch (error) {
+            console.error("Error seeding new admins:", error);
+          }
+        }
+
         setContacts(list);
         setDbConnected(true);
       }
@@ -154,6 +185,25 @@ export default function App() {
         snapshot.forEach((doc) => {
           list.push(doc.data() as Message);
         });
+
+        // Ensure welcome messages from the new admins are seeded if missing
+        const hasMsg12 = list.some((m) => m.id === 'm12');
+        const hasMsg13 = list.some((m) => m.id === 'm13');
+        if (!hasMsg12 || !hasMsg13) {
+          try {
+            const batch = writeBatch(db);
+            INITIAL_MESSAGES.forEach((msg) => {
+              if (msg.id === 'm12' || msg.id === 'm13') {
+                const docRef = doc(db, 'messages', msg.id);
+                batch.set(docRef, msg);
+              }
+            });
+            batch.commit().catch(err => console.error("Batch commit failed for messages", err));
+          } catch (error) {
+            console.error("Error seeding new admin messages:", error);
+          }
+        }
+
         setMessages(list);
       }
     }, (error) => {
@@ -186,7 +236,6 @@ export default function App() {
     });
 
     return () => {
-      unsubscribeUser();
       unsubscribeContacts();
       unsubscribeMessages();
       unsubscribeCalls();
@@ -553,9 +602,29 @@ export default function App() {
     };
     window.addEventListener('triggerGoogleOAuth', handleGoogleOAuth);
 
+    const handleLogout = () => {
+      setIsLoggedIn(false);
+      localStorage.removeItem('isLoggedIn_state');
+      localStorage.removeItem('currentUser_profile');
+      setCurrentUser({
+        id: '',
+        name: '',
+        avatar: '👤',
+        email: '',
+        avatarType: 'emoji' as 'emoji' | 'image_url',
+        avatarUrl: '',
+        isGoogleLinked: false,
+        googleEmail: '',
+        status: 'offline' as 'online' | 'offline' | 'away',
+        role: ''
+      });
+    };
+    window.addEventListener('logout', handleLogout);
+
     return () => {
       window.removeEventListener('addContact', handleAddContact);
       window.removeEventListener('triggerGoogleOAuth', handleGoogleOAuth);
+      window.removeEventListener('logout', handleLogout);
     };
   }, []);
 
@@ -593,6 +662,8 @@ export default function App() {
     sounds.playMessageSentSound();
     try {
       await setDoc(doc(db, 'messages', newMsg.id), newMsg);
+      // Sync to Supabase asynchronously
+      syncMessageToSupabase(newMsg);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `messages/${newMsg.id}`);
     }
@@ -683,6 +754,8 @@ export default function App() {
         sounds.playMessageReceivedSound();
         try {
           await setDoc(doc(db, 'messages', replyMsg.id), replyMsg);
+          // Sync to Supabase asynchronously
+          syncMessageToSupabase(replyMsg);
         } catch (err) {
           handleFirestoreError(err, OperationType.WRITE, `messages/${replyMsg.id}`);
         }
@@ -735,6 +808,8 @@ export default function App() {
   const saveCallRecordToFirestore = async (newRecord: CallRecord) => {
     try {
       await setDoc(doc(db, 'calls', newRecord.id), newRecord);
+      // Sync to Supabase asynchronously
+      syncCallToSupabase(newRecord);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `calls/${newRecord.id}`);
     }
@@ -951,6 +1026,17 @@ export default function App() {
   };
 
   const currentBgClass = THEME_CLASSES[themeBackground] || THEME_CLASSES.bg_cream;
+
+  const handleLoginSuccess = (user: any) => {
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    localStorage.setItem('isLoggedIn_state', 'true');
+    localStorage.setItem('currentUser_profile', JSON.stringify(user));
+  };
+
+  if (!isLoggedIn) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
 
   return (
     <div className={`w-screen h-screen flex flex-col ${currentBgClass} overflow-hidden font-sans select-none`} dir="rtl">

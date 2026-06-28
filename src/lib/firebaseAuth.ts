@@ -5,7 +5,10 @@ import {
   GoogleAuthProvider, 
   onAuthStateChanged, 
   User,
-  signOut
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -42,6 +45,29 @@ export const initAuth = (
       if (onAuthFailure) onAuthFailure();
     }
   });
+};
+
+// Standard Email Sign-up
+export const registerWithEmail = async (email: string, pass: string, name: string): Promise<User> => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(userCredential.user, { displayName: name });
+    return userCredential.user;
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    throw error;
+  }
+};
+
+// Standard Email Sign-in
+export const loginWithEmail = async (email: string, pass: string): Promise<User> => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    return userCredential.user;
+  } catch (error: any) {
+    console.error('Login error:', error);
+    throw error;
+  }
 };
 
 // Must be called from a button click or user interaction
