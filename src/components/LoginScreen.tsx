@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Shield, AlertTriangle, ArrowLeft, LogIn, UserPlus } from 'lucide-react';
-import { registerWithEmail, loginWithEmail } from '../lib/firebaseAuth';
+import { Mail, Lock, User, Shield, AlertTriangle, ArrowLeft, LogIn, UserPlus, Chrome } from 'lucide-react';
+import { registerWithEmail, loginWithEmail, googleSignIn } from '../lib/firebaseAuth';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: {
@@ -34,6 +34,38 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        const { user } = result;
+        setSuccess('تم تسجيل الدخول بواسطة Google بنجاح! 🎉');
+        setTimeout(() => {
+          onLoginSuccess({
+            id: user.uid,
+            name: user.displayName || user.email?.split('@')[0] || 'مستخدم Google',
+            avatar: user.photoURL || '👤',
+            email: user.email || '',
+            avatarType: user.photoURL ? 'image_url' : 'emoji',
+            avatarUrl: user.photoURL || '',
+            isGoogleLinked: true,
+            googleEmail: user.email || '',
+            status: 'online',
+            role: 'مستخدم مسجل'
+          });
+        }, 1200);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError('فشل تسجيل الدخول باستخدام Google. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUserAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,93 +292,32 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           )}
 
           {activeTab === 'user' ? (
-            <form onSubmit={handleUserAuth} className="space-y-4">
-              {isRegister && (
-                <div>
-                  <label className="block text-xs font-semibold text-stone-600 mb-1">الاسم الكريم</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400">
-                      <User className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-sm text-right"
-                      placeholder="عبدالله العتيبي"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">البريد الإلكتروني</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400">
-                    <Mail className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="email"
-                    dir="ltr"
-                    className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-sm text-left"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">كلمة المرور</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400">
-                    <Lock className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="password"
-                    dir="ltr"
-                    className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-sm text-left"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
+            <div className="space-y-5 py-2 text-center">
+              <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-emerald-800 text-xs leading-relaxed">
+                <span className="font-bold block mb-1">🔐 دخول آمن عبر Google:</span>
+                تم حصر تسجيل دخول المستخدمين العاديين باستخدام حساب Google فقط لضمان الهوية الموثقة والأمان التام للمنصة.
               </div>
 
               <button
-                type="submit"
+                type="button"
+                onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-extrabold rounded-2xl border border-stone-200 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-3 text-sm cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
-                  <span className="animate-pulse">جاري التحميل...</span>
-                ) : isRegister ? (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    <span>إنشاء حساب والبدء</span>
-                  </>
+                  <span className="animate-pulse">جاري الاتصال بـ Google...</span>
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4" />
-                    <span>تسجيل الدخول</span>
+                    <Chrome className="w-5 h-5 text-emerald-600" />
+                    <span>تسجيل الدخول باستخدام Google</span>
                   </>
                 )}
               </button>
 
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRegister(!isRegister);
-                    setError(null);
-                    setSuccess(null);
-                  }}
-                  className="text-xs text-emerald-600 hover:text-emerald-800 font-semibold underline transition-all"
-                >
-                  {isRegister ? 'لديك حساب بالفعل؟ سجل دخولك' : 'ليس لديك حساب؟ قم بإنشاء حساب جديد'}
-                </button>
-              </div>
-            </form>
+              <p className="text-[10px] text-stone-400">
+                بالنقرة أعلاه، سيتم فتح نافذة آمنة للتحقق من هويتك وحفظ ملفك الشخصي.
+              </p>
+            </div>
           ) : (
             <form onSubmit={handleAdminAuth} className="space-y-4">
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs mb-2">
