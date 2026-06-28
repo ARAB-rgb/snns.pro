@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Shield, AlertTriangle, ArrowLeft, LogIn, UserPlus, Chrome } from 'lucide-react';
 import { registerWithEmail, loginWithEmail, googleSignIn } from '../lib/firebaseAuth';
+import BrandLogo from './BrandLogo';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: {
@@ -225,30 +226,32 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   return (
-    <div id="login_screen_container" className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/90 backdrop-blur-md font-sans p-4 select-none">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-stone-200 flex flex-col transition-all">
-        {/* Banner Section */}
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-800 p-6 text-white text-center relative">
-          <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-xs font-mono">
-            V1.2
+    <div id="login_screen_container" className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl font-sans p-4 select-none">
+      <div className="bg-[#0D0D0C] rounded-[32px] shadow-[0_0_50px_rgba(197,160,89,0.15)] w-full max-w-md overflow-hidden border border-[#2E2E2A]/60 flex flex-col transition-all">
+        {/* Luxury Banner Section */}
+        <div className="bg-gradient-to-b from-[#1C1C1A] to-[#0A0A09] p-8 text-white text-center relative border-b border-[#2E2E2A]/40 flex flex-col items-center">
+          <div className="absolute top-4 right-4 bg-[#C5A059]/10 border border-[#C5A059]/30 text-[#C5A059] px-3 py-1 rounded-full text-[10px] font-mono tracking-widest font-extrabold uppercase">
+            V1.2 PRO
           </div>
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg border border-white/20">
-            <Shield className="w-8 h-8 text-emerald-100" />
+          
+          {/* Logo */}
+          <div className="mb-4 mt-2">
+            <BrandLogo size="lg" showText={true} />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">منصة الاتصال والرقابة المتقدمة</h1>
-          <p className="text-xs text-emerald-100/80 mt-1">
-            تسجيل الدخول الآمن للمستخدمين والمشرفين
+
+          <p className="text-[11px] text-[#A89F91] max-w-xs mt-2 leading-relaxed">
+            البوابة الآمنة والمشفرة لربط الاتصالات وإدارة الرقابة والبلاغات
           </p>
         </div>
 
         {/* Tab Toggle */}
-        <div className="flex border-b border-stone-200">
+        <div className="flex border-b border-[#2E2E2A]/40 bg-[#121211]">
           <button
             type="button"
-            className={`flex-1 py-4 text-center font-medium transition-colors border-b-2 ${
+            className={`flex-1 py-4 text-center text-xs font-black tracking-wider transition-all border-b-2 ${
               activeTab === 'user'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/20'
-                : 'border-transparent text-stone-500 hover:text-stone-700'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/5 font-black'
+                : 'border-transparent text-stone-500 hover:text-stone-300'
             }`}
             onClick={() => {
               setActiveTab('user');
@@ -256,14 +259,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               setSuccess(null);
             }}
           >
-            تسجيل المستخدمين
+            بوابة المستخدمين والعملاء
           </button>
           <button
             type="button"
-            className={`flex-1 py-4 text-center font-medium transition-colors border-b-2 ${
+            className={`flex-1 py-4 text-center text-xs font-black tracking-wider transition-all border-b-2 ${
               activeTab === 'admin'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/20'
-                : 'border-transparent text-stone-500 hover:text-stone-700'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/5 font-black'
+                : 'border-transparent text-stone-500 hover:text-stone-300'
             }`}
             onClick={() => {
               setActiveTab('admin');
@@ -271,87 +274,91 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               setSuccess(null);
             }}
           >
-            دخول المشرفين والأدمن
+            بوابة المشرفين والمراقبين
           </button>
         </div>
 
         {/* Form Container */}
-        <div className="p-6 flex-1">
+        <div className="p-6 flex-1 space-y-4">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border-r-4 border-red-500 rounded-lg text-red-700 text-sm flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="p-3.5 bg-rose-950/40 border-r-4 border-rose-500 rounded-2xl text-rose-200 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-emerald-50 border-r-4 border-emerald-500 rounded-lg text-emerald-700 text-sm flex items-start gap-2">
-              <Shield className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="p-3.5 bg-emerald-950/40 border-r-4 border-emerald-500 rounded-2xl text-emerald-200 text-xs flex items-start gap-2.5">
+              <Shield className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
               <span>{success}</span>
             </div>
           )}
 
           {activeTab === 'user' ? (
             <div className="space-y-5 py-2 text-center">
-              <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-emerald-800 text-xs leading-relaxed">
-                <span className="font-bold block mb-1">🔐 دخول آمن عبر Google:</span>
-                تم حصر تسجيل دخول المستخدمين العاديين باستخدام حساب Google فقط لضمان الهوية الموثقة والأمان التام للمنصة.
+              <div className="p-4 bg-[#1C1C1A] border border-[#2E2E2A]/70 rounded-2xl text-stone-300 text-xs leading-relaxed text-right">
+                <span className="font-extrabold text-[#C5A059] block mb-1.5 flex items-center gap-1">
+                  🔐 دخول مشفر وموثق عبر Google:
+                </span>
+                لحماية خصوصية المحادثات وضمان بيئة تواصل آمنة خالية من السلوكيات المسيئة، تم تخصيص الدخول عبر حساب Google الموثق فقط.
               </div>
 
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full py-3.5 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-extrabold rounded-2xl border border-stone-200 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-3 text-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-4 bg-gradient-to-r from-[#A8894A] via-[#C5A059] to-[#E6C15C] hover:brightness-115 active:brightness-95 text-[#0D0D0C] font-black rounded-2xl shadow-[0_4px_15px_rgba(197,160,89,0.3)] hover:shadow-[0_4px_25px_rgba(197,160,89,0.45)] transition-all flex items-center justify-center gap-3 text-xs cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
-                  <span className="animate-pulse">جاري الاتصال بـ Google...</span>
+                  <span className="animate-pulse">جاري الاتصال الآمن بـ Google...</span>
                 ) : (
                   <>
-                    <Chrome className="w-5 h-5 text-emerald-600" />
-                    <span>تسجيل الدخول باستخدام Google</span>
+                    <Chrome className="w-4 h-4 text-stone-950 stroke-[3]" />
+                    <span>تسجيل الدخول الفوري بـ Google</span>
                   </>
                 )}
               </button>
 
-              <p className="text-[10px] text-stone-400">
-                بالنقرة أعلاه، سيتم فتح نافذة آمنة للتحقق من هويتك وحفظ ملفك الشخصي.
+              <p className="text-[10px] text-stone-500">
+                جميع الاتصالات مشفرة وفق بروتوكولات حماية الهوية الخاصة بـ SNNS.PRO
               </p>
             </div>
           ) : (
             <form onSubmit={handleAdminAuth} className="space-y-4">
-              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-800 text-xs mb-2">
-                <span className="font-bold block mb-1">تسجيل دخول المشرفين:</span>
-                خاص بمشرفي النظام المصرح لهم فقط. يرجى إدخال اسم المستخدم وكلمة المرور الخاصة بك للولوج إلى لوحة التحكم.
+              <div className="p-4 bg-[#1C1C1A] border border-[#2E2E2A]/70 rounded-2xl text-stone-300 text-xs text-right leading-relaxed">
+                <span className="font-bold text-[#C5A059] block mb-1 flex items-center gap-1">
+                  🛡️ تسجيل دخول المشرفين المعتمدين:
+                </span>
+                يتطلب إدخال المعرف الرقمي الخاص بك. أي محاولة ولوج غير مصرح بها يتم تسجيلها فوراً للتحقيق الجنائي الرقمي.
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">اسم المستخدم (المعرف الخاص بك)</label>
+              <div className="space-y-1">
+                <label className="block text-[11px] font-extrabold text-[#A89F91] text-right">المعرف الرقمي للمشرف (ID)</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400">
-                    <Shield className="w-4 h-4" />
+                  <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500">
+                    <Shield className="w-4 h-4 text-[#C5A059]" />
                   </span>
                   <input
                     type="text"
                     dir="ltr"
-                    className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-sm text-left"
-                    placeholder="أدخل المعرف"
+                    className="w-full pr-11 pl-4 py-3 rounded-xl border border-[#2E2E2A] bg-[#121211] focus:bg-[#1C1C1A] focus:ring-1 focus:ring-[#C5A059] text-white focus:border-[#C5A059] outline-none transition-all text-xs text-left font-mono font-bold"
+                    placeholder="e.g. 1007363904"
                     value={adminUsername}
                     onChange={(e) => setAdminUsername(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">كلمة المرور السرية للأدمن</label>
+              <div className="space-y-1">
+                <label className="block text-[11px] font-extrabold text-[#A89F91] text-right">رمز المرور السري المشفر</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400">
-                    <Lock className="w-4 h-4" />
+                  <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500">
+                    <Lock className="w-4 h-4 text-[#C5A059]" />
                   </span>
                   <input
                     type="password"
                     dir="ltr"
-                    className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-sm text-left"
+                    className="w-full pr-11 pl-4 py-3 rounded-xl border border-[#2E2E2A] bg-[#121211] focus:bg-[#1C1C1A] focus:ring-1 focus:ring-[#C5A059] text-white focus:border-[#C5A059] outline-none transition-all text-xs text-left font-mono font-bold"
                     placeholder="••••••••"
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
@@ -362,14 +369,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-teal-800 hover:bg-teal-900 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 bg-gradient-to-r from-[#8A6E35] to-[#C5A059] hover:brightness-110 text-white font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs cursor-pointer disabled:opacity-50 mt-2"
               >
                 {loading ? (
-                  <span className="animate-pulse">جاري التحقق...</span>
+                  <span className="animate-pulse">جاري مراجعة الهوية والتفويض...</span>
                 ) : (
                   <>
                     <Shield className="w-4 h-4" />
-                    <span>دخول المشرفين ذوي الصلاحية</span>
+                    <span>تسجيل الدخول المشفر للمشرف</span>
                   </>
                 )}
               </button>
@@ -377,19 +384,19 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           )}
 
           {/* Guest Bypass Link */}
-          <div className="relative my-5 flex items-center">
-            <div className="flex-grow border-t border-stone-200"></div>
-            <span className="flex-shrink mx-3 text-stone-400 text-xs">أو</span>
-            <div className="flex-grow border-t border-stone-200"></div>
+          <div className="relative my-4 flex items-center">
+            <div className="flex-grow border-t border-[#2E2E2A]/40"></div>
+            <span className="flex-shrink mx-3 text-stone-600 text-[11px] font-bold">أو للتحقق والمشاهدة</span>
+            <div className="flex-grow border-t border-[#2E2E2A]/40"></div>
           </div>
 
           <button
             type="button"
             onClick={handleGuestBypass}
-            className="w-full py-2.5 border border-stone-300 hover:bg-stone-50 text-stone-600 font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
+            className="w-full py-3 border border-[#2E2E2A] hover:bg-[#1C1C1A]/50 text-[#C5A059] hover:text-[#E6C15C] font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-xs cursor-pointer bg-transparent"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>الدخول كزائر / تخطي مؤقت</span>
+            <span>تخطي تجريبي سريع (دخول فوري كضيف)</span>
           </button>
         </div>
       </div>

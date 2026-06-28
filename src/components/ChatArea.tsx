@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Contact, Message } from '../types';
+import BrandLogo from './BrandLogo';
 import { 
   Phone, 
   Video, 
@@ -157,17 +158,25 @@ export default function ChatArea({
 
   if (!activeContact) {
     return (
-      <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-[#FAF9F6] text-[#2D2D2D] p-8 select-none text-center">
-        <div className="w-24 h-24 rounded-full bg-[#E5E1D8] border border-[#E5E1D8] flex items-center justify-center text-4xl mb-6 shadow-xl text-[#556B2F] animate-pulse">
-          💬
-        </div>
-        <h2 className="text-xl font-bold text-[#2D2D2D] mb-2">تطبيق المراسلات والمكالمات المتكامل</h2>
-        <p className="text-sm text-[#A8A293] max-w-sm leading-relaxed">
-          اختر جهة اتصال أو مجموعة من القائمة الجانبية لبدء المراسلة ومحاكاة مكالمات الصوت والفيديو بجودة عالية شبيهة بـ تيمز وواتساب.
-        </p>
-        <div className="mt-8 px-4 py-2 bg-[#556B2F]/10 border border-[#556B2F]/20 rounded-full text-xs text-[#556B2F] flex items-center gap-2 font-bold">
-          <Volume2 className="w-3.5 h-3.5" />
-          <span>يدعم المؤثرات الصوتية والتقاط الكاميرا الحقيقية</span>
+      <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-[#0B0B0A] text-white p-8 select-none text-center relative overflow-hidden">
+        {/* Subtle background luxury details */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-[#C5A059]/5 blur-[120px]"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-[#8A6E35]/5 blur-[120px]"></div>
+
+        <div className="relative z-10 flex flex-col items-center max-w-md">
+          <div className="mb-6 scale-110">
+            <BrandLogo size="lg" showText={true} />
+          </div>
+          
+          <h2 className="text-lg font-extrabold text-white mb-2">منصة الاتصال والرقابة المتقدمة</h2>
+          <p className="text-xs text-[#A89F91] leading-relaxed max-w-sm mb-6">
+            اختر جهة اتصال أو مجموعة من القائمة الجانبية للبدء. جميع المحادثات والمكالمات في هذه المنصة مشفرة ومؤمنة بالكامل تحت إشراف أدمن الرقابة.
+          </p>
+
+          <div className="px-4 py-2 bg-[#C5A059]/10 border border-[#C5A059]/30 rounded-full text-[10px] font-black tracking-wider text-[#C5A059] flex items-center gap-2">
+            <Volume2 className="w-3.5 h-3.5 animate-pulse text-[#C5A059]" />
+            <span>نظام إلكتروني آمن مشفر فوري (256-bit SSL)</span>
+          </div>
         </div>
       </div>
     );
@@ -393,40 +402,40 @@ export default function ChatArea({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#FAF9F6] text-[#2D2D2D] select-none relative" dir="rtl">
+    <div className="flex-1 flex flex-col h-full bg-[#0A0A09] text-white select-none relative" dir="rtl">
       
-      {/* Top Header Active Chat Info */}
-      <div className="p-4 bg-[#FAF9F6] border-b border-[#E5E1D8] flex items-center justify-between z-10 shadow-sm">
+      {/* Top Header Active Chat Info - Luxury gold style */}
+      <div className="p-4 bg-[#0D0D0C] border-b border-[#2E2E2A]/70 flex items-center justify-between z-10 shadow-lg">
         <div className="flex items-center gap-3">
           {/* Back button for mobile view */}
           <button 
             onClick={onBackToSidebar}
-            className="md:hidden p-2 hover:bg-[#E5E1D8] rounded-lg text-[#2D2D2D] transition ml-1"
+            className="md:hidden p-2 hover:bg-[#1C1C1A] rounded-lg text-stone-300 transition ml-1"
             title="رجوع"
           >
-            <ChevronLeft className="w-5 h-5 rotate-180" />
+            <ChevronLeft className="w-5 h-5 rotate-180 text-[#C5A059]" />
           </button>
 
           <div className="relative">
-            <div className="w-11 h-11 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-2xl shadow-md select-none">
+            <div className="w-11 h-11 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-2xl shadow-md select-none">
               {activeContact.avatar}
             </div>
             {activeContact.status === 'online' && (
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#FAF9F6] rounded-full"></span>
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0D0D0C] rounded-full"></span>
             )}
             {activeContact.status === 'away' && (
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-500 border-2 border-[#FAF9F6] rounded-full"></span>
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-500 border-2 border-[#0D0D0C] rounded-full"></span>
             )}
           </div>
 
           <div className="text-right">
-            <h3 className="font-bold text-sm text-[#2D2D2D] flex items-center gap-1.5">
+            <h3 className="font-extrabold text-sm text-white flex items-center gap-1.5">
               {activeContact.name}
-              <span className="text-[10px] text-[#556B2F] bg-[#556B2F]/10 px-2 py-0.5 rounded-full font-bold">{activeContact.bio?.split('|')[0]}</span>
+              <span className="text-[10px] text-[#C5A059] bg-[#C5A059]/10 border border-[#C5A059]/30 px-2 py-0.5 rounded-full font-black">{activeContact.bio?.split('|')[0]}</span>
             </h3>
-            <p className="text-[11px] text-[#A8A293]">
+            <p className="text-[11px] text-stone-400">
               {activeContact.status === 'typing' ? (
-                <span className="text-[#556B2F] font-bold animate-pulse">يكتب الآن...</span>
+                <span className="text-[#C5A059] font-bold animate-pulse">يكتب الآن...</span>
               ) : (
                 activeContact.status === 'online' ? 'نشط الآن' : 'غير متصل حالياً'
               )}
@@ -438,15 +447,15 @@ export default function ChatArea({
         <div className="flex items-center gap-1">
           <button
             onClick={() => onStartCall(activeContact, 'video')}
-            className="p-2.5 hover:bg-[#556B2F]/15 text-[#556B2F] hover:text-[#556B2F]/80 rounded-xl border border-[#556B2F]/20 bg-[#556B2F]/5 transition-colors shadow-sm flex items-center gap-1.5"
+            className="p-2.5 hover:bg-[#C5A059]/20 text-[#C5A059] hover:text-[#E6C15C] rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
             title="اتصال مرئي تيمز / إيمو"
           >
-            <Video className="w-4 h-4 text-[#556B2F]" />
-            <span className="text-xs font-bold hidden sm:inline text-[#556B2F]">مكالمة فيديو</span>
+            <Video className="w-4 h-4 text-[#C5A059]" />
+            <span className="text-xs font-black hidden sm:inline text-[#C5A059]">مكالمة فيديو</span>
           </button>
           <button
             onClick={() => onStartCall(activeContact, 'audio')}
-            className="p-2.5 hover:bg-[#556B2F]/15 text-[#556B2F]/90 hover:text-[#556B2F]/75 rounded-xl border border-[#556B2F]/20 bg-[#556B2F]/5 transition-colors shadow-sm flex items-center gap-1.5"
+            className="p-2.5 hover:bg-[#C5A059]/20 text-[#C5A059]/90 hover:text-[#E6C15C] rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
             title="اتصال صوتي واتساب"
           >
             <Phone className="w-4 h-4 text-[#556B2F]/90" />
@@ -455,15 +464,15 @@ export default function ChatArea({
           <div className="relative">
             <button 
               onClick={() => setShowWallpaperMenu(!showWallpaperMenu)}
-              className="p-2.5 hover:bg-[#E5E1D8] rounded-xl text-[#2D2D2D] transition-colors flex items-center gap-1 border border-[#E5E1D8] bg-white shadow-sm"
+              className="p-2.5 hover:bg-[#1C1C1A] rounded-xl text-stone-300 transition-colors flex items-center gap-1 border border-[#2E2E2A]/70 bg-[#121211] shadow-md cursor-pointer"
               title="تغيير خلفية الدردشة"
             >
-              🎨 <span className="text-xs font-bold hidden md:inline text-[#2D2D2D]">الخلفيات</span>
+              🎨 <span className="text-xs font-black hidden md:inline text-stone-300">الخلفيات</span>
             </button>
             
             {showWallpaperMenu && (
-              <div className="absolute left-0 mt-2 w-48 bg-white border border-[#E5E1D8] rounded-2xl shadow-xl z-50 p-2 text-right animate-fadeIn">
-                <p className="text-[11px] font-bold text-[#A8A293] px-2.5 py-1.5 border-b border-[#F2F0E9] mb-1">اختر خلفية للدردشة</p>
+              <div className="absolute left-0 mt-2 w-48 bg-[#0D0D0C] border border-[#2E2E2A] rounded-2xl shadow-2xl z-50 p-2 text-right animate-fadeIn">
+                <p className="text-[11px] font-black text-[#A89F91] px-2.5 py-1.5 border-b border-[#2E2E2A]/60 mb-1">اختر خلفية للدردشة</p>
                 {WALLPAPERS.map((wp) => (
                   <button
                     key={wp.id}
@@ -472,12 +481,12 @@ export default function ChatArea({
                       localStorage.setItem('chatWallpaper', wp.id);
                       setShowWallpaperMenu(false);
                     }}
-                    className={`w-full text-right px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors ${
-                      chatWallpaper === wp.id ? 'bg-[#556B2F]/10 text-[#556B2F] font-bold' : 'hover:bg-[#F2F0E9] text-[#2D2D2D]'
+                    className={`w-full text-right px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
+                      chatWallpaper === wp.id ? 'bg-[#C5A059]/15 text-[#C5A059] font-black' : 'hover:bg-[#1C1C1A] text-stone-300'
                     }`}
                   >
                     <span>{wp.name}</span>
-                    {chatWallpaper === wp.id && <Check className="w-3.5 h-3.5 text-[#556B2F]" />}
+                    {chatWallpaper === wp.id && <Check className="w-3.5 h-3.5 text-[#C5A059]" />}
                   </button>
                 ))}
               </div>
@@ -503,7 +512,7 @@ export default function ChatArea({
         
         {isRealMode && (
           <div className="flex justify-center select-none animate-fadeIn mb-2">
-            <span className="text-[10px] font-extrabold text-white bg-emerald-600 px-4 py-1.5 rounded-full shadow-md border border-emerald-500 flex items-center gap-1.5 animate-pulse">
+            <span className="text-[10px] font-black text-[#C5A059] bg-[#C5A059]/10 px-4 py-1.5 rounded-full shadow-md border border-[#C5A059]/30 flex items-center gap-1.5 animate-pulse">
               🌐 اتصال حقيقي مباشر (رقم الغرفة: {roomId})
             </span>
           </div>
@@ -511,7 +520,7 @@ export default function ChatArea({
 
         {/* Info banner */}
         <div className="flex justify-center select-none">
-          <span className="text-[10px] font-bold tracking-wider text-[#556B2F] bg-[#F2F0E9] px-3 py-1 rounded-full border border-[#E5E1D8] shadow-xs flex items-center gap-1">
+          <span className="text-[10px] font-extrabold tracking-wider text-[#C5A059] bg-[#121211] px-3 py-1 rounded-full border border-[#2E2E2A]/70 shadow-md flex items-center gap-1">
             {isRealMode ? '⚡ الربط المباشر نشط (تبادل فوري للبيانات والصوت والفيديو)' : '🔒 تشفير متكامل من طرف لطرف (محاكاة واتساب الآمنة)'}
           </span>
         </div>
@@ -526,19 +535,19 @@ export default function ChatArea({
               <div className="flex gap-2.5 max-w-[80%] items-end">
                 {/* Avatar for remote participant */}
                 {!isMe && (
-                  <div className="w-7 h-7 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-sm shadow-xs select-none text-[#2D2D2D]">
+                  <div className="w-7 h-7 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-xs select-none text-[#C5A059]">
                     {msg.senderId === activeContact.id ? activeContact.avatar : '👤'}
                   </div>
                 )}
 
                 <div className={`rounded-2xl p-3 shadow-md relative flex flex-col ${
                   isMe 
-                    ? 'bg-[#556B2F] text-white rounded-br-none shadow-[#556B2F]/10' 
-                    : 'bg-white border border-[#E5E1D8] text-[#2D2D2D] rounded-bl-none'
+                    ? 'bg-gradient-to-l from-[#8A6E35] to-[#C5A059] text-stone-950 rounded-br-none shadow-[#C5A059]/10 font-medium' 
+                    : 'bg-[#121211] border border-[#2E2E2A] text-white rounded-bl-none'
                 }`}>
                   {/* Sender name for group chats */}
                   {!isMe && activeContact.isGroup && (
-                    <span className="text-[10px] font-extrabold text-[#556B2F] mb-1 block">
+                    <span className="text-[10px] font-extrabold text-[#C5A059] mb-1 block">
                       {msg.senderName}
                     </span>
                   )}
@@ -744,7 +753,7 @@ export default function ChatArea({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-[#0B0B0A] p-2 rounded-xl">
             
             {/* Attach Action */}
             <button
@@ -752,8 +761,8 @@ export default function ChatArea({
                 setShowAttachmentMenu(!showAttachmentMenu);
                 setShowEmojiPicker(false);
               }}
-              className={`p-2.5 rounded-xl transition ${
-                showAttachmentMenu ? 'bg-[#E5E1D8] text-[#556B2F]' : 'hover:bg-[#E5E1D8]/50 text-[#A8A293]'
+              className={`p-2.5 rounded-xl transition cursor-pointer ${
+                showAttachmentMenu ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : 'hover:bg-[#1C1C1A] text-stone-400'
               }`}
               title="إرفاق ملفات"
             >
@@ -766,8 +775,8 @@ export default function ChatArea({
                 setShowEmojiPicker(!showEmojiPicker);
                 setShowAttachmentMenu(false);
               }}
-              className={`p-2.5 rounded-xl transition ${
-                showEmojiPicker ? 'bg-[#E5E1D8] text-[#556B2F]' : 'hover:bg-[#E5E1D8]/50 text-[#A8A293]'
+              className={`p-2.5 rounded-xl transition cursor-pointer ${
+                showEmojiPicker ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : 'hover:bg-[#1C1C1A] text-stone-400'
               }`}
               title="ملصقات ورموز"
             >
@@ -783,14 +792,14 @@ export default function ChatArea({
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="اكتب رسالة فورية هنا..."
-                className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl py-2.5 pl-4 pr-4 text-xs sm:text-sm text-[#2D2D2D] placeholder-[#A8A293] focus:outline-none focus:ring-1 focus:ring-[#556B2F] focus:border-[#556B2F] transition-colors"
+                className="w-full bg-[#121211] border border-[#2E2E2A] rounded-xl py-2.5 pl-4 pr-4 text-xs sm:text-sm text-white placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] transition-colors"
               />
             </div>
 
             {/* Voice Record trigger */}
             <button
               onClick={startVoiceRecording}
-              className="p-2.5 hover:bg-[#E5E1D8]/50 text-[#A8A293] hover:text-[#556B2F] rounded-xl transition"
+              className="p-2.5 hover:bg-[#1C1C1A] text-stone-400 hover:text-[#C5A059] rounded-xl transition cursor-pointer"
               title="تسجيل رسالة صوتية"
             >
               <Mic className="w-5 h-5" />
@@ -801,10 +810,10 @@ export default function ChatArea({
               id="send_message_btn"
               onClick={handleSend}
               disabled={!inputText.trim()}
-              className={`p-2.5 rounded-xl font-bold flex items-center justify-center transition-all ${
+              className={`p-2.5 rounded-xl font-black flex items-center justify-center transition-all cursor-pointer ${
                 inputText.trim() 
-                  ? 'bg-[#556B2F] hover:bg-[#556B2F]/90 text-white scale-105 shadow-md shadow-[#556B2F]/25' 
-                  : 'bg-[#E5E1D8] text-[#A8A293] cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-[#8A6E35] to-[#C5A059] text-stone-950 scale-105 shadow-lg shadow-[#C5A059]/20' 
+                  : 'bg-[#1C1C1A] text-stone-600 border border-[#2E2E2A]/50 cursor-not-allowed'
               }`}
               title="إرسال"
             >
@@ -816,23 +825,23 @@ export default function ChatArea({
 
       {/* Complaint / Report Modal */}
       {showComplaintModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" dir="rtl">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-stone-100 shadow-2xl space-y-4 animate-scaleIn text-right">
-            <div className="flex items-center gap-2 text-rose-600">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" dir="rtl">
+          <div className="bg-[#0D0D0C] rounded-3xl p-6 max-w-md w-full border border-rose-950/50 shadow-2xl space-y-4 animate-scaleIn text-right">
+            <div className="flex items-center gap-2 text-rose-500">
               <AlertTriangle className="w-5 h-5 animate-bounce" />
-              <h3 className="font-extrabold text-base">تقديم بلاغ رسمي للإدارة والمشرفين</h3>
+              <h3 className="font-extrabold text-base text-stone-100">تقديم بلاغ رسمي للإدارة والمشرفين</h3>
             </div>
-            <p className="text-xs text-[#A8A293] leading-relaxed">
+            <p className="text-xs text-[#A89F91] leading-relaxed">
               إذا واجهت أي محتوى مسيء، إزعاج، أو سلوك غير لائق من جهة اتصال، يرجى ملء التفاصيل أدناه. سيقوم الأدمن والمسؤولون بمراجعة شكواك فوراً واتخاذ الإجراءات اللازمة.
             </p>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-stone-500 block">تفاصيل الشكوى أو الإساءة:</label>
+              <label className="text-[11px] font-black text-rose-400 block">تفاصيل الشكوى أو الإساءة:</label>
               <textarea
                 value={complaintText}
                 onChange={(e) => setComplaintText(e.target.value)}
                 placeholder="اكتب هنا بوضوح سبب الشكوى، التفاصيل، أو الرابط المسيء..."
                 rows={4}
-                className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-rose-500 focus:border-rose-500 transition-all resize-none"
+                className="w-full bg-[#121211] border border-rose-950/40 rounded-xl p-3 text-xs text-white placeholder-stone-600 focus:outline-none focus:ring-1 focus:ring-rose-500 focus:border-rose-500 transition-all resize-none"
               />
             </div>
             <div className="flex gap-2.5 pt-1">
@@ -840,7 +849,7 @@ export default function ChatArea({
                 type="button"
                 onClick={handleSendComplaint}
                 disabled={submittingComplaint}
-                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 py-2.5 bg-rose-700 hover:bg-rose-800 disabled:opacity-50 text-white font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {submittingComplaint ? 'جاري التقديم...' : 'تقديم البلاغ فورا 🛡️'}
               </button>
@@ -850,7 +859,7 @@ export default function ChatArea({
                   setComplaintText('');
                   setShowComplaintModal(false);
                 }}
-                className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold rounded-xl text-xs transition cursor-pointer"
+                className="px-4 py-2.5 bg-[#1C1C1A] hover:bg-[#2E2E2A] text-stone-300 font-extrabold rounded-xl text-xs transition border border-[#2E2E2A]/50 cursor-pointer"
               >
                 إلغاء
               </button>

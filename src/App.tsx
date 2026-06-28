@@ -5,7 +5,9 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import VideoCallScreen from './components/VideoCallScreen';
 import LoginScreen from './components/LoginScreen';
+import LandingPage from './components/LandingPage';
 import AdminPanel from './components/AdminPanel';
+import BrandLogo from './components/BrandLogo';
 import { sounds } from './utils/audio';
 import { 
   collection, 
@@ -34,7 +36,8 @@ import {
   Smartphone,
   Laptop,
   Wifi,
-  WifiOff
+  WifiOff,
+  ChevronRight
 } from 'lucide-react';
 
 export default function App() {
@@ -56,6 +59,8 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('isLoggedIn_state') === 'true';
   });
+
+  const [showLogin, setShowLogin] = useState(false);
 
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('currentUser_profile');
@@ -81,7 +86,7 @@ export default function App() {
   });
 
   const [themeBackground, setThemeBackground] = useState(() => {
-    return localStorage.getItem('themeBackground_class') || 'bg_cream';
+    return localStorage.getItem('themeBackground_class') || 'bg_luxury';
   });
 
   const [showHiddenContacts, setShowHiddenContacts] = useState(() => {
@@ -624,6 +629,7 @@ export default function App() {
     const handleLogout = () => {
       firebaseLogout().catch(err => console.error("Firebase logout error:", err));
       setIsLoggedIn(false);
+      setShowLogin(false);
       localStorage.removeItem('isLoggedIn_state');
       localStorage.removeItem('currentUser_profile');
       setCurrentUser({
@@ -1043,14 +1049,14 @@ export default function App() {
   };
 
   const THEME_CLASSES: Record<string, string> = {
+    bg_luxury: "bg-[#0A0A09] text-[#F5F5F3] dark-theme-active",
+    bg_obsidian: "bg-[#000000] text-[#E5E7EB] dark-theme-active",
+    bg_gold: "bg-[#141310] text-[#F3EFE0] dark-theme-active",
     bg_cream: "bg-[#FAF9F6] text-[#2D2D2D]",
-    bg_olive: "bg-[#F0F2EB] text-[#2D2D2D]",
-    bg_lavender: "bg-[#F4F1F7] text-[#2D2D2D]",
-    bg_sakura: "bg-[#FAF5F6] text-[#2D2D2D]",
-    bg_cosmic: "bg-[#14121A] text-[#FAF9F6] dark-theme-active"
+    bg_olive: "bg-[#F0F2EB] text-[#2D2D2D]"
   };
 
-  const currentBgClass = THEME_CLASSES[themeBackground] || THEME_CLASSES.bg_cream;
+  const currentBgClass = THEME_CLASSES[themeBackground] || THEME_CLASSES.bg_luxury;
 
   const handleLoginSuccess = (user: any) => {
     setCurrentUser(user);
@@ -1059,25 +1065,60 @@ export default function App() {
     localStorage.setItem('currentUser_profile', JSON.stringify(user));
   };
 
+  const handleGuestBypass = () => {
+    handleLoginSuccess({
+      id: 'guest_user',
+      name: 'عبدالله العتيبي (ضيف)',
+      avatar: '👤',
+      email: 'guest@snns.pro',
+      avatarType: 'emoji',
+      avatarUrl: '',
+      isGoogleLinked: false,
+      googleEmail: '',
+      status: 'online',
+      role: 'زائر منصة'
+    });
+  };
+
   if (!isLoggedIn) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    if (showLogin) {
+      return (
+        <div className="relative">
+          {/* Back to landing page button floating on top */}
+          <button 
+            onClick={() => setShowLogin(false)} 
+            className="fixed top-6 left-6 z-[60] bg-[#121211] hover:bg-[#1C1C1A] border border-[#2E2E2A]/60 text-[#C5A059] px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-xl cursor-pointer border-b-2 border-[#C5A059]/40"
+          >
+            <span>العودة للرئيسية</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+          <LoginScreen onLoginSuccess={handleLoginSuccess} />
+        </div>
+      );
+    }
+    return (
+      <LandingPage 
+        onNavigateToLogin={() => setShowLogin(true)} 
+        onNavigateToGuest={handleGuestBypass}
+      />
+    );
   }
 
   return (
     <div className={`w-screen h-screen flex flex-col ${currentBgClass} overflow-hidden font-sans select-none`} dir="rtl">
       
-      {/* Top Main App Navigation Frame Bar */}
-      <div className="bg-[#FAF9F6] p-3.5 border-b border-[#E5E1D8] flex items-center justify-between select-none px-4 shadow-sm shrink-0">
+      {/* Top Main App Navigation Frame Bar - Luxury Dark Gold theme */}
+      <div className="bg-[#0B0B0A] p-3.5 border-b border-[#2E2E2A]/70 flex items-center justify-between select-none px-4 shadow-xl shrink-0 z-20">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#556B2F] flex items-center justify-center text-lg shadow-md text-white">
-            📞
+          <div className="w-9 h-9 bg-[#1C1C1A] border border-[#C5A059]/40 rounded-xl flex items-center justify-center shadow-lg">
+            <BrandLogo size="sm" showText={false} />
           </div>
           <div className="text-right">
-            <h1 className="text-xs sm:text-sm font-extrabold tracking-wide text-[#2D2D2D] flex items-center gap-1.5">
-              منصة الاتصال المرئي والدردشة المتكاملة
-              <span className="text-[9px] bg-[#556B2F]/10 text-[#556B2F] border border-[#556B2F]/20 px-2 py-0.5 rounded-full font-bold">إصدار تجريبي ذكي</span>
+            <h1 className="text-xs sm:text-sm font-extrabold tracking-wide text-white flex items-center gap-2">
+              منصة الاتصالات والرقابة المشفرة <span className="text-[#C5A059] font-black">SNNS.PRO</span>
+              <span className="text-[9px] bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/35 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">آمن ومعتمد</span>
             </h1>
-            <p className="text-[10px] text-[#A8A293] font-medium">محاكاة متكاملة لـ تيمز، إيمو، وواتساب</p>
+            <p className="text-[10px] text-[#A89F91] font-semibold">نظام المراقبة الفورية ومكافحة التجاوزات والبلاغات</p>
           </div>
         </div>
 
@@ -1089,10 +1130,10 @@ export default function App() {
                 navigator.clipboard.writeText(window.location.href);
                 alert("تم نسخ الرابط! أرسله لصديقك وافتحا نفس الصفحة لبدء دردشة ومكالمة WebRTC حقيقية فوراً.");
               }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer border border-emerald-500/30"
+              className="bg-emerald-950/40 border border-emerald-500/50 text-emerald-300 text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer hover:bg-emerald-900/40"
               title="نسخ رابط دعوة الغرفة"
             >
-              <span className="animate-pulse">🟢</span>
+              <span className="animate-pulse text-emerald-400">🟢</span>
               <span>رابط الغرفة نشط (اضغط للنسخ)</span>
             </button>
           ) : (
@@ -1103,7 +1144,7 @@ export default function App() {
                 window.history.pushState({}, '', url);
                 setRoomId(randId);
               }}
-              className="bg-[#556B2F] hover:bg-[#556B2F]/90 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+              className="bg-gradient-to-r from-[#8A6E35] to-[#C5A059] hover:brightness-110 active:scale-95 text-stone-950 text-[11px] font-black px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md cursor-pointer border border-[#E6C15C]/30"
               title="إنشاء غرفة اتصال مرئي ومراسلة حقيقية"
             >
               🌐 اتصال حقيقي (غرفة WebRTC)
@@ -1121,45 +1162,45 @@ export default function App() {
             </button>
           )}
 
-          <div className="hidden lg:flex items-center gap-2 bg-[#F2F0E9] px-3 py-1.5 rounded-xl border border-[#E5E1D8] text-xs">
-            <Laptop className="w-3.5 h-3.5 text-[#556B2F]" />
-            <span className="text-[#2D2D2D] font-medium">سطح المكتب</span>
-            <span className="text-[#E5E1D8]">|</span>
-            <Smartphone className="w-3.5 h-3.5 text-[#556B2F]" />
-            <span className="text-[#2D2D2D] font-medium">الجوال</span>
+          <div className="hidden lg:flex items-center gap-2 bg-[#121211] px-3 py-1.5 rounded-xl border border-[#2E2E2A]/60 text-xs">
+            <Laptop className="w-3.5 h-3.5 text-[#C5A059]" />
+            <span className="text-[#A89F91] font-extrabold text-[11px]">سطح المكتب</span>
+            <span className="text-[#2E2E2A]">|</span>
+            <Smartphone className="w-3.5 h-3.5 text-[#C5A059]" />
+            <span className="text-[#A89F91] font-extrabold text-[11px]">الجوال</span>
           </div>
 
           <button 
             onClick={toggleSimulateOffline}
-            className={`p-2.5 rounded-xl border transition-colors flex items-center gap-1.5 ${
+            className={`p-2.5 rounded-xl border transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${
               isSimulatedOffline || !isOnline
-                ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100/50'
-                : 'bg-[#556B2F]/10 border-[#556B2F]/30 text-[#556B2F] hover:bg-[#556B2F]/20'
+                ? 'bg-rose-950/40 border-rose-800 text-rose-300 hover:bg-rose-900/40'
+                : 'bg-[#C5A059]/10 border-[#C5A059]/30 text-[#C5A059] hover:bg-[#C5A059]/20'
             }`}
             title={(isSimulatedOffline || !isOnline) ? "محاكاة إعادة الاتصال بالشبكة" : "محاكاة قطع الاتصال بالشبكة"}
           >
-            {isSimulatedOffline || !isOnline ? <WifiOff className="w-4 h-4 text-rose-600" /> : <Wifi className="w-4 h-4 text-[#556B2F]" />}
-            <span className="text-[10px] font-extrabold hidden md:inline">
-              {isSimulatedOffline || !isOnline ? 'منقطع' : 'متصل بالشبكة'}
+            {isSimulatedOffline || !isOnline ? <WifiOff className="w-4 h-4 text-rose-400" /> : <Wifi className="w-4 h-4 text-[#C5A059]" />}
+            <span className="text-[10px] font-black hidden md:inline">
+              {isSimulatedOffline || !isOnline ? 'منقطع' : 'متصل آمن'}
             </span>
           </button>
 
           <button 
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-2.5 rounded-xl border transition-colors ${
+            className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
               soundEnabled 
-                ? 'bg-[#556B2F]/10 border-[#556B2F]/30 text-[#556B2F] hover:bg-[#556B2F]/20' 
-                : 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100/50'
+                ? 'bg-[#C5A059]/10 border-[#C5A059]/30 text-[#C5A059] hover:bg-[#C5A059]/20' 
+                : 'bg-rose-950/40 border-rose-800 text-rose-300 hover:bg-rose-900/40'
             }`}
             title={soundEnabled ? "كتم أصوات التطبيق" : "تفعيل أصوات التطبيق"}
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4 animate-pulse" /> : <VolumeX className="w-4 h-4" />}
+            {soundEnabled ? <Volume2 className="w-4 h-4 text-[#C5A059] animate-pulse" /> : <VolumeX className="w-4 h-4 text-rose-400" />}
           </button>
 
           {/* Hamburger to slide Sidebar on mobile manually */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="md:hidden p-2.5 hover:bg-[#E5E1D8]/50 rounded-xl border border-[#E5E1D8] text-[#2D2D2D]"
+            className="md:hidden p-2.5 hover:bg-[#1C1C1A] rounded-xl border border-[#2E2E2A]/70 text-stone-300"
             title="القائمة الجانبية"
           >
             <Menu className="w-4 h-4" />

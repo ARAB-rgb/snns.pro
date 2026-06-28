@@ -81,11 +81,11 @@ interface SidebarProps {
 const PREDEFINED_EMOJIS = ['👤', '👨‍💻', '👩‍🎨', '👨‍💼', '👩‍⚕️', '🦁', '🐼', '🦊', '🐱', '🎩', '👑', '🚀', '✨', '⚡'];
 
 const THEMES = [
+  { id: 'bg_luxury', name: 'الذهبي الفاخر (SNNS)', color: 'bg-[#0A0A09]' },
+  { id: 'bg_obsidian', name: 'الأسود اللامع (Obsidian)', color: 'bg-[#000000]' },
+  { id: 'bg_gold', name: 'الغسق الذهبي (Twilight)', color: 'bg-[#141310]' },
   { id: 'bg_cream', name: 'البيج الكلاسيكي', color: 'bg-[#FAF9F6]' },
-  { id: 'bg_olive', name: 'أخضر زيتوني لطيف', color: 'bg-[#F0F2EB]' },
-  { id: 'bg_lavender', name: 'اللافندر الهادئ', color: 'bg-[#F4F1F7]' },
-  { id: 'bg_sakura', name: 'الوردي الهادئ', color: 'bg-[#FAF5F6]' },
-  { id: 'bg_cosmic', name: 'الليل الكوني', color: 'bg-[#14121A]' },
+  { id: 'bg_olive', name: 'أخضر زيتوني', color: 'bg-[#F0F2EB]' },
 ];
 
 const GOOGLE_MOCK_CONTACTS: Contact[] = [
@@ -249,7 +249,7 @@ export default function Sidebar({
         <img 
           src={currentUser.avatarUrl} 
           alt="My Profile" 
-          className="w-10 h-10 rounded-full object-cover border-2 border-[#556B2F] shadow-md"
+          className="w-10 h-10 rounded-full object-cover border-2 border-[#C5A059] shadow-md"
           referrerPolicy="no-referrer"
           onError={(e) => {
             // fallback if image fails
@@ -259,7 +259,7 @@ export default function Sidebar({
       );
     }
     return (
-      <div className="w-10 h-10 rounded-full bg-[#556B2F] flex items-center justify-center text-lg font-bold text-white shadow-md">
+      <div className="w-10 h-10 rounded-full bg-[#C5A059] flex items-center justify-center text-lg font-bold text-[#0D0D0C] shadow-md">
         {currentUser.avatar || '👤'}
       </div>
     );
@@ -589,16 +589,16 @@ export default function Sidebar({
         <div className="flex items-center gap-3">
           <div className="relative cursor-pointer" onClick={() => setShowSettingsModal(true)} title="الملف الشخصي والإعدادات">
             {renderUserAvatar()}
-            <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-[#F2F0E9] rounded-full ${
+            <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-[#121211] rounded-full ${
               currentUser.status === 'offline' 
                 ? 'bg-gray-400' 
                 : currentUser.status === 'away' 
                   ? 'bg-amber-500' 
-                  : 'bg-[#556B2F]'
+                  : 'bg-[#C5A059]'
             }`}></span>
           </div>
           <div className="text-right">
-            <h2 className="font-semibold text-sm text-[#2D2D2D] flex items-center gap-1.5 cursor-pointer hover:text-[#556B2F]" onClick={() => setShowSettingsModal(true)}>
+            <h2 className="font-extrabold text-sm text-white flex items-center gap-1.5 cursor-pointer hover:text-[#C5A059]" onClick={() => setShowSettingsModal(true)}>
               {currentUser.name}
               {currentUser.isGoogleLinked && (
                 <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
@@ -637,7 +637,7 @@ export default function Sidebar({
           <button
             onClick={() => setShowSettingsModal(true)}
             title="تغيير الصورة، الاسم، الخلفية، وربط جوجل"
-            className="p-2 bg-[#FAF9F6] border border-[#E5E1D8] hover:bg-[#E5E1D8] rounded-xl text-[#2D2D2D] hover:text-[#556B2F] transition duration-150"
+            className="p-2 bg-[#121211] border border-[#2E2E2A]/70 hover:bg-[#1C1C1A] rounded-xl text-stone-300 hover:text-[#C5A059] transition duration-150"
           >
             <Settings className="w-3.5 h-3.5" />
           </button>
@@ -650,7 +650,7 @@ export default function Sidebar({
               }
             }}
             title="تسجيل الخروج"
-            className="p-2 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-xl text-rose-600 hover:text-rose-700 transition duration-150 cursor-pointer"
+            className="p-2 bg-rose-950/20 border border-rose-900 hover:bg-rose-950/40 rounded-xl text-rose-400 hover:text-rose-300 transition duration-150 cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>
@@ -661,9 +661,9 @@ export default function Sidebar({
               id="simulate_call_btn"
               onClick={() => setShowSimulateDropdown(!showSimulateDropdown)}
               title="محاكاة مكالمة واردة"
-              className="p-2 hover:bg-[#E5E1D8] rounded-xl text-[#556B2F] hover:text-[#556B2F]/80 transition duration-150 flex items-center bg-[#556B2F]/10 border border-[#556B2F]/20"
+              className="p-2 hover:bg-[#1C1C1A] rounded-xl text-[#C5A059] hover:text-[#C5A059]/80 transition duration-150 flex items-center bg-[#C5A059]/10 border border-[#C5A059]/20"
             >
-              <BellRing className="w-3.5 h-3.5 text-[#556B2F]" />
+              <BellRing className="w-3.5 h-3.5 text-[#C5A059]" />
             </button>
           )}
 
@@ -673,17 +673,17 @@ export default function Sidebar({
                 <span className="text-[11px] font-bold text-[#A8A293] block uppercase tracking-wider">اختر متصلاً لمحاكاة اتصال وارد:</span>
               </div>
               {contacts.filter(c => !c.isGroup && c.visibility !== 'hidden').slice(0, 4).map((c) => (
-                <div key={c.id} className="border-b border-[#E5E1D8]/40 last:border-0">
-                  <div className="px-3 py-1 text-xs font-semibold text-[#2D2D2D] bg-[#F2F0E9] flex items-center justify-between">
+                <div key={c.id} className="border-b border-[#2E2E2A]/40 last:border-0">
+                  <div className="px-3 py-1 text-xs font-semibold text-white bg-[#121211] flex items-center justify-between">
                     <span>{c.name}</span>
-                    <span className="text-[10px] text-[#A8A293] font-normal">📞</span>
+                    <span className="text-[10px] text-[#C5A059] font-normal">📞</span>
                   </div>
                   <button
                      onClick={() => {
                        onTriggerIncomingCall(c.id, 'video');
                        setShowSimulateDropdown(false);
                      }}
-                     className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F] hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
+                     className="w-full text-right px-4 py-1.5 text-xs text-[#C5A059] hover:bg-[#C5A059]/10 flex items-center gap-1.5 transition"
                   >
                      <span>🎥 فيديو (مثل تيمز/إيمو)</span>
                   </button>
@@ -692,7 +692,7 @@ export default function Sidebar({
                        onTriggerIncomingCall(c.id, 'audio');
                        setShowSimulateDropdown(false);
                      }}
-                     className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F]/80 hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
+                     className="w-full text-right px-4 py-1.5 text-xs text-[#C5A059]/80 hover:bg-[#C5A059]/10 flex items-center gap-1.5 transition"
                   >
                      <span>📞 صوتية (مثل واتساب)</span>
                   </button>
@@ -704,59 +704,59 @@ export default function Sidebar({
       </div>
 
       {/* Search Input */}
-      <div className="p-3 bg-[#FAF9F6] border-b border-[#E5E1D8]">
+      <div className="p-3 bg-[#0B0B0A] border-b border-[#2E2E2A]/60">
         <div className="relative flex items-center">
-          <Search className="absolute right-3 w-4 h-4 text-[#A8A293]" />
+          <Search className="absolute right-3 w-4 h-4 text-[#C5A059]" />
           <input
             id="search_contacts_input"
             type="text"
             placeholder="البحث عن دردشة، مكالمة أو جهة اتصال..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#F4F2EE] text-xs text-[#2D2D2D] pl-4 pr-10 py-2.5 rounded-xl border border-[#E5E1D8] focus:outline-none focus:ring-1 focus:ring-[#556B2F] focus:border-[#556B2F] transition-colors"
+            className="w-full bg-[#121211] text-xs text-white pl-4 pr-10 py-2.5 rounded-xl border border-[#2E2E2A]/70 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] transition-colors placeholder-stone-500"
           />
         </div>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex bg-[#F2F0E9] border-b border-[#E5E1D8] text-xs font-semibold text-[#A8A293]">
+      <div className="flex bg-[#121211] border-b border-[#2E2E2A]/60 text-xs font-semibold text-stone-400">
         <button
           id="tab_chats"
           onClick={() => setActiveTab('chats')}
-          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 ${
-            activeTab === 'chats' ? 'text-[#556B2F] font-bold bg-[#FAF9F6]' : 'hover:bg-[#FAF9F6]/40'
+          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'chats' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
           }`}
         >
           <MessageSquare className="w-4 h-4" />
           <span>الدردشات</span>
-          {activeTab === 'chats' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#556B2F]"></span>}
+          {activeTab === 'chats' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
         <button
           id="tab_calls"
           onClick={() => setActiveTab('calls')}
-          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 ${
-            activeTab === 'calls' ? 'text-[#556B2F] font-bold bg-[#FAF9F6]' : 'hover:bg-[#FAF9F6]/40'
+          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'calls' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
           }`}
         >
           <Phone className="w-4 h-4" />
           <span>المكالمات</span>
-          {activeTab === 'calls' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#556B2F]"></span>}
+          {activeTab === 'calls' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
         <button
           id="tab_contacts"
           onClick={() => setActiveTab('contacts')}
-          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 ${
-            activeTab === 'contacts' ? 'text-[#556B2F] font-bold bg-[#FAF9F6]' : 'hover:bg-[#FAF9F6]/40'
+          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'contacts' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
           }`}
         >
           <Users className="w-4 h-4" />
           <span>العناوين ({filteredContacts.length})</span>
-          {activeTab === 'contacts' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#556B2F]"></span>}
+          {activeTab === 'contacts' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
       </div>
 
       {/* Dynamic List Content */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#FAF9F6]">
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0D0D0C]">
         {activeTab === 'chats' && (
           <div className="divide-y divide-[#E5E1D8]/40">
             {filteredContacts.length === 0 ? (
@@ -771,35 +771,35 @@ export default function Sidebar({
                     key={contact.id}
                     id={`chat_item_${contact.id}`}
                     onClick={() => onSelectContact(contact)}
-                    className={`p-3.5 flex items-center justify-between cursor-pointer transition relative ${
-                      isSelected ? 'bg-[#F2F0E9] border-r-4 border-[#556B2F]' : 'hover:bg-[#F2F0E9]/30'
-                    } ${contact.visibility === 'hidden' ? 'bg-amber-50/40 border-l-2 border-dashed border-amber-300' : ''}`}
+                    className={`p-3.5 flex items-center justify-between cursor-pointer transition relative border-b border-[#2E2E2A]/30 ${
+                      isSelected ? 'bg-[#1C1C1A] border-r-4 border-[#C5A059]' : 'hover:bg-[#121211]/55'
+                    } ${contact.visibility === 'hidden' ? 'bg-amber-950/20 border-l-2 border-dashed border-amber-600' : ''}`}
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="relative flex-shrink-0">
                         {renderContactAvatar(contact, "w-11 h-11 text-xl")}
                         {contact.status === 'online' && (
-                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#FAF9F6] rounded-full animate-pulse"></span>
+                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#0D0D0C] rounded-full animate-pulse"></span>
                         )}
                         {contact.status === 'away' && (
-                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-500 border-2 border-[#FAF9F6] rounded-full"></span>
+                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-500 border-2 border-[#0D0D0C] rounded-full"></span>
                         )}
                       </div>
                       <div className="text-right overflow-hidden">
-                        <h3 className="font-bold text-sm text-[#2D2D2D] flex items-center gap-1 truncate">
+                        <h3 className="font-bold text-sm text-white flex items-center gap-1 truncate">
                           {contact.name}
                           {contact.isGroup && (
-                            <span className="text-[9px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
+                            <span className="text-[9px] bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30 px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
                           )}
                           {contact.visibility === 'hidden' && (
-                            <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="جهة اتصال مخفية">
+                            <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-800/50 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="جهة اتصال مخفية">
                               🔒 مخفية
                             </span>
                           )}
                         </h3>
-                        <p className="text-xs text-[#A8A293] truncate mt-0.5 max-w-[190px]">
+                        <p className="text-xs text-stone-400 truncate mt-0.5 max-w-[190px]">
                           {contact.status === 'typing' ? (
-                            <span className="text-[#556B2F] font-bold animate-pulse">يكتب الآن...</span>
+                            <span className="text-[#C5A059] font-bold animate-pulse">يكتب الآن...</span>
                           ) : (
                             lastMsg.text
                           )}
@@ -808,9 +808,9 @@ export default function Sidebar({
                     </div>
 
                     <div className="flex flex-col items-end gap-1 text-left flex-shrink-0">
-                      <span className="text-[9px] text-[#A8A293] font-mono">{lastMsg.timestamp}</span>
+                      <span className="text-[9px] text-[#A89F91] font-mono">{lastMsg.timestamp}</span>
                       {contact.status === 'online' && !isSelected && (
-                        <span className="w-2 h-2 bg-[#556B2F] rounded-full"></span>
+                        <span className="w-2 h-2 bg-[#C5A059] rounded-full"></span>
                       )}
                     </div>
                   </div>

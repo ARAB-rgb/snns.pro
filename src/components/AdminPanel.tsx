@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { sounds } from '../utils/audio';
 import { 
   Shield, 
   AlertTriangle, 
@@ -118,6 +119,8 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
   const [dbMessages, setDbMessages] = useState<any[]>([]);
   const [dbUsers, setDbUsers] = useState<any[]>([]);
   const [dbComplaints, setDbComplaints] = useState<any[]>([]);
+  const [newComplaintAlert, setNewComplaintAlert] = useState<any | null>(null);
+  const isInitialLoad = useRef(true);
   const [loading, setLoading] = useState(true);
   const [copiedSql, setCopiedSql] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -179,6 +182,26 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
         const timeB = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : (b.timestamp ? new Date(b.timestamp).getTime() : 0);
         return timeB - timeA;
       });
+
+      // Detect new complaints in real-time
+      if (!isInitialLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            if (data && data.text) {
+              setNewComplaintAlert({ id: change.doc.id, ...data });
+              try {
+                sounds.playMessageReceivedSound();
+              } catch (soundErr) {
+                console.error("Audio playback error:", soundErr);
+              }
+            }
+          }
+        });
+      } else {
+        isInitialLoad.current = false;
+      }
+
       setDbComplaints(list);
       setLoading(false);
     }, (err) => {
@@ -308,85 +331,125 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
 
   return (
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl border border-stone-100 overflow-hidden animate-scaleIn">
+      <div className="bg-white rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl border border-stone-100 overflow-hidden animate-scaleIn relative">
         
+        {/* Real-time Complaint Alert Toast */}
+        {newComplaintAlert && (
+          <div className="absolute top-4 left-4 right-4 z-50 bg-gradient-to-r from-rose-500 via-rose-600 to-amber-600 text-white rounded-2xl p-4 shadow-2xl border border-rose-400/30 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slideDown ring-4 ring-rose-500/20 text-right">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 animate-pulse shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-300" />
+              </div>
+              <div>
+                <span className="inline-block text-[10px] bg-red-700/60 px-2 py-0.5 rounded-full font-extrabold mb-1">
+                  🚨 بلاغ تلقائي مباشر جديد
+                </span>
+                <h4 className="text-xs font-black">
+                  بلاغ جديد من العضو: <span className="underline decoration-amber-300 decoration-2 font-black">{newComplaintAlert.userName || 'مستعمل مجهول'}</span> ({newComplaintAlert.userEmail || 'بدون بريد'})
+                </h4>
+                <p className="text-[11px] text-white/90 mt-0.5 font-medium line-clamp-1">
+                  "{newComplaintAlert.text || 'لم يتم كتابة تفاصيل.'}"
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+              <button
+                onClick={() => {
+                  setActiveTab('complaints');
+                  setNewComplaintAlert(null);
+                }}
+                className="px-3.5 py-2 bg-white hover:bg-stone-50 text-rose-600 font-extrabold rounded-xl text-[11px] transition duration-150 shadow-md cursor-pointer flex items-center gap-1"
+              >
+                <span>🔍 فحص وعرض الشكوى</span>
+              </button>
+              <button
+                onClick={() => setNewComplaintAlert(null)}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition cursor-pointer"
+                title="إغلاق"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header bar */}
-        <div className="bg-[#556B2F] p-4 text-white flex items-center justify-between shrink-0">
+        <div className="bg-[#0D0D0C] p-4 text-white flex items-center justify-between shrink-0 border-b border-[#2E2E2A]/80 shadow-md">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-              <Shield className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 bg-[#C5A059]/10 rounded-xl flex items-center justify-center border border-[#C5A059]/30">
+              <Shield className="w-5 h-5 text-[#C5A059]" />
             </div>
             <div className="text-right">
-              <h2 className="text-sm font-black flex items-center gap-2">
-                لوحة الرقابة التامة والتحكم الإشرافي العليا
-                <span className="text-[10px] bg-red-600 px-2 py-0.5 rounded-full font-bold">نشط</span>
+              <h2 className="text-sm font-black flex items-center gap-2 text-white">
+                لوحة الرقابة التامة والتحكم الإشرافي العليا (SNNS.PRO)
+                <span className="text-[10px] bg-red-600 px-2 py-0.5 rounded-full font-black animate-pulse">نشط</span>
               </h2>
-              <p className="text-[10px] text-white/70">
+              <p className="text-[10px] text-stone-400">
                 مراقبة المحادثات وتدقيق البلاغات والشكاوى وتسيير الاتصال مع Supabase | الأدمن {currentUser.name}
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-xl text-white/80 hover:text-white transition duration-150 cursor-pointer"
+            className="p-2 hover:bg-white/10 rounded-xl text-stone-400 hover:text-white transition duration-150 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-[#C5A059]" />
           </button>
         </div>
 
         {/* Overview Stats Bar */}
-        <div className="bg-[#FAF9F6] border-b border-stone-200/60 p-4 grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0 text-right">
-          <div className="p-3 bg-white border border-stone-100 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="bg-[#0A0A09] border-b border-[#2E2E2A]/50 p-4 grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0 text-right">
+          <div className="p-3 bg-[#121211] border border-[#2E2E2A]/60 rounded-2xl flex items-center justify-between shadow-md">
             <div>
-              <span className="block text-[10px] text-stone-400 font-bold">إجمالي المستخدمين</span>
-              <span className="text-base font-black text-stone-800">{dbUsers.length}</span>
+              <span className="block text-[10px] text-[#A89F91] font-extrabold">إجمالي المستخدمين</span>
+              <span className="text-base font-black text-white">{dbUsers.length}</span>
             </div>
-            <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 rounded-xl flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="p-3 bg-white border border-stone-100 rounded-2xl flex items-center justify-between shadow-sm">
+          <div className="p-3 bg-[#121211] border border-[#2E2E2A]/60 rounded-2xl flex items-center justify-between shadow-md">
             <div>
-              <span className="block text-[10px] text-stone-400 font-bold">الرسائل المراقبة</span>
-              <span className="text-base font-black text-stone-800">{dbMessages.length}</span>
+              <span className="block text-[10px] text-[#A89F91] font-extrabold">الرسائل المراقبة</span>
+              <span className="text-base font-black text-white">{dbMessages.length}</span>
             </div>
-            <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 rounded-xl flex items-center justify-center">
               <MessageCircle className="w-4 h-4" />
             </div>
           </div>
-          <div className="p-3 bg-white border border-stone-100 rounded-2xl flex items-center justify-between shadow-sm">
+          <div className="p-3 bg-[#121211] border border-[#2E2E2A]/60 rounded-2xl flex items-center justify-between shadow-md">
             <div>
-              <span className="block text-[10px] text-stone-400 font-bold">البلاغات والشكاوى</span>
-              <span className="text-base font-black text-rose-600">
+              <span className="block text-[10px] text-[#A89F91] font-extrabold">البلاغات والشكاوى</span>
+              <span className="text-base font-black text-rose-500">
                 {dbComplaints.filter(c => c.status !== 'resolved').length}
-                <span className="text-xs text-stone-400 font-normal"> / {dbComplaints.length}</span>
+                <span className="text-xs text-stone-500 font-normal"> / {dbComplaints.length}</span>
               </span>
             </div>
-            <div className="w-8 h-8 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center animate-pulse">
+            <div className="w-8 h-8 bg-rose-950/40 text-rose-400 border border-rose-900/40 rounded-xl flex items-center justify-center animate-pulse">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <div className="p-3 bg-white border border-stone-100 rounded-2xl flex items-center justify-between shadow-sm">
+          <div className="p-3 bg-[#121211] border border-[#2E2E2A]/60 rounded-2xl flex items-center justify-between shadow-md">
             <div>
-              <span className="block text-[10px] text-stone-400 font-bold">قاعدة Supabase</span>
-              <span className={`text-xs font-bold ${supabaseStats.connected ? 'text-emerald-600' : 'text-rose-500'}`}>
+              <span className="block text-[10px] text-[#A89F91] font-extrabold">قاعدة Supabase</span>
+              <span className={`text-xs font-bold ${supabaseStats.connected ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {supabaseStats.connected ? 'مزامنة نشطة ✅' : 'غير متصل ❌'}
               </span>
             </div>
-            <div className="w-8 h-8 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 rounded-xl flex items-center justify-center">
               <Database className="w-4 h-4" />
             </div>
           </div>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-stone-200 bg-[#FAF9F6] shrink-0 text-right">
+        <div className="flex border-b border-[#2E2E2A]/60 bg-[#0D0D0C] shrink-0 text-right">
           <button
             onClick={() => setActiveTab('monitoring')}
-            className={`flex-1 py-3 text-center text-xs font-extrabold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-3 text-center text-xs font-black transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'monitoring'
-                ? 'border-[#556B2F] text-[#556B2F] bg-white font-black'
-                : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-stone-100/50'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#121211] font-black'
+                : 'border-transparent text-stone-400 hover:text-white hover:bg-[#1C1C1A]/55'
             }`}
           >
             <Activity className="w-4 h-4" />
@@ -394,10 +457,10 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
           </button>
           <button
             onClick={() => setActiveTab('complaints')}
-            className={`flex-1 py-3 text-center text-xs font-extrabold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-3 text-center text-xs font-black transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'complaints'
-                ? 'border-[#556B2F] text-[#556B2F] bg-white font-black'
-                : 'border-transparent text-stone-500 hover:text-[#556B2F] hover:bg-stone-100/50'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#121211] font-black'
+                : 'border-transparent text-stone-400 hover:text-white hover:bg-[#1C1C1A]/55'
             }`}
           >
             <AlertTriangle className="w-4 h-4" />
@@ -405,10 +468,10 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex-1 py-3 text-center text-xs font-extrabold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-3 text-center text-xs font-black transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'users'
-                ? 'border-[#556B2F] text-[#556B2F] bg-white font-black'
-                : 'border-transparent text-stone-500 hover:text-[#556B2F] hover:bg-stone-100/50'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#121211] font-black'
+                : 'border-transparent text-stone-400 hover:text-white hover:bg-[#1C1C1A]/55'
             }`}
           >
             <Users className="w-4 h-4" />
@@ -416,10 +479,10 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
           </button>
           <button
             onClick={() => setActiveTab('supabase')}
-            className={`flex-1 py-3 text-center text-xs font-extrabold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-3 text-center text-xs font-black transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'supabase'
-                ? 'border-[#556B2F] text-[#556B2F] bg-white font-black'
-                : 'border-transparent text-stone-500 hover:text-[#556B2F] hover:bg-stone-100/50'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#121211] font-black'
+                : 'border-transparent text-stone-400 hover:text-white hover:bg-[#1C1C1A]/55'
             }`}
           >
             <Database className="w-4 h-4" />
@@ -428,12 +491,12 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
         </div>
 
         {/* Tab Contents Area */}
-        <div className="flex-1 overflow-y-auto p-5 bg-stone-50">
+        <div className="flex-1 overflow-y-auto p-5 bg-[#0A0A09]">
           
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full space-y-3">
-              <RefreshCw className="w-8 h-8 text-[#556B2F] animate-spin" />
-              <p className="text-xs text-stone-500">جاري قراءة البيانات الحية وتأمين القناة الإشرافية...</p>
+              <RefreshCw className="w-8 h-8 text-[#C5A059] animate-spin" />
+              <p className="text-xs text-[#A89F91]">جاري قراءة البيانات الحية وتأمين القناة الإشرافية...</p>
             </div>
           ) : activeTab === 'monitoring' ? (
             <div className="space-y-4">

@@ -259,27 +259,27 @@ export default function VideoCallScreen({
   };
 
   return (
-    <div id="video_call_screen_overlay" className="fixed inset-0 z-[100] bg-[#FAF9F6] text-[#2D2D2D] flex flex-col justify-between overflow-hidden select-none font-sans" dir="rtl">
+    <div id="video_call_screen_overlay" className="fixed inset-0 z-[100] bg-[#0A0A09] text-white flex flex-col justify-between overflow-hidden select-none font-sans" dir="rtl">
       
       {/* Top Status Bar info */}
-      <div className="p-4 bg-[#FAF9F6]/90 border-b border-[#E5E1D8]/60 shadow-sm flex items-center justify-between z-20">
+      <div className="p-4 bg-[#0D0D0C]/90 border-b border-[#2E2E2A]/70 shadow-lg flex items-center justify-between z-20">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping"></span>
-          <span className="text-xs font-bold text-[#2D2D2D] font-mono tracking-wide">
+          <span className="text-xs font-black text-[#C5A059] font-mono tracking-wide">
             {status === 'connected' ? `متصل • ${formatTime(duration)}` : 'جاري الاتصال...'}
           </span>
         </div>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-[#2D2D2D] flex items-center justify-center gap-1.5">
+          <h2 className="text-sm font-extrabold text-white flex items-center justify-center gap-1.5">
             {contact?.name} 
-            <span className="text-[10px] font-bold bg-[#556B2F]/10 text-[#556B2F] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-black bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 px-2 py-0.5 rounded-full">
               {type === 'video' ? 'مكالمة فيديو مرئية' : 'مكالمة صوتية'}
             </span>
           </h2>
-          <p className="text-[11px] text-[#A8A293] mt-0.5">{contact?.bio?.split('|')[0]}</p>
+          <p className="text-[11px] text-[#A89F91] mt-0.5">{contact?.bio?.split('|')[0]}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-[#556B2F] bg-[#556B2F]/10 border border-[#556B2F]/20 px-3 py-1 rounded-full font-bold">
-          <ShieldAlert className="w-3.5 h-3.5 text-[#556B2F]" />
+        <div className="flex items-center gap-2 text-xs text-[#C5A059] bg-[#C5A059]/10 border border-[#C5A059]/20 px-3 py-1 rounded-full font-black">
+          <ShieldAlert className="w-3.5 h-3.5 text-[#C5A059]" />
           <span className="hidden sm:inline">اتصال مشفر وآمن</span>
         </div>
       </div>
@@ -291,16 +291,16 @@ export default function VideoCallScreen({
         {status === 'ringing_outgoing' && (
           <div className="text-center space-y-6 z-10 animate-fadeIn">
             <div className="relative inline-block">
-              <div className="w-28 h-28 rounded-full bg-[#E5E1D8] border-2 border-[#556B2F] flex items-center justify-center text-5xl shadow-2xl animate-pulse">
+              <div className="w-28 h-28 rounded-full bg-[#1C1C1A] border-2 border-[#C5A059] flex items-center justify-center text-5xl shadow-2xl animate-pulse">
                 {contact?.avatar}
               </div>
-              <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#556B2F] rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-[#FAF9F6] animate-bounce">
+              <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#C5A059] rounded-full flex items-center justify-center text-xs font-bold text-[#0D0D0C] border-2 border-[#0A0A09] animate-bounce">
                 📞
               </span>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[#2D2D2D]">يرن هاتفك الآن...</h3>
-              <p className="text-xs text-[#556B2F] mt-1 font-bold">جاري الاتصال بـ {contact?.name} (مكالمة {type === 'video' ? 'فيديو تيمز' : 'صوتية واتساب'})</p>
+              <h3 className="text-lg font-extrabold text-white">يرن هاتف الطرف الآخر...</h3>
+              <p className="text-xs text-[#C5A059] mt-1 font-bold">جاري الاتصال بـ {contact?.name} (مكالمة {type === 'video' ? 'فيديو تيمز' : 'صوتية واتساب'})</p>
             </div>
           </div>
         )}
@@ -309,16 +309,16 @@ export default function VideoCallScreen({
         {status === 'ringing_incoming' && (
           <div className="text-center space-y-6 z-10 animate-fadeIn">
             <div className="relative inline-block">
-              <div className="w-28 h-28 rounded-full bg-[#E5E1D8] border-2 border-[#556B2F] flex items-center justify-center text-5xl shadow-2xl animate-bounce">
+              <div className="w-28 h-28 rounded-full bg-[#1C1C1A] border-2 border-[#C5A059] flex items-center justify-center text-5xl shadow-2xl animate-bounce">
                 {contact?.avatar}
               </div>
-              <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#556B2F] rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-[#FAF9F6] animate-ping">
+              <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#C5A059] rounded-full flex items-center justify-center text-xs font-bold text-[#0D0D0C] border-2 border-[#0A0A09] animate-ping">
                 🔔
               </span>
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-[#2D2D2D]">مكالمة واردة من {contact?.name}</h3>
-              <p className="text-xs text-[#556B2F] mt-1 font-bold">اضغط رد للإجابة وبدء مكالمة {type === 'video' ? 'الفيديو التفاعلية' : 'الصوتية'}</p>
+              <h3 className="text-lg font-extrabold text-white">مكالمة واردة من {contact?.name}</h3>
+              <p className="text-xs text-[#C5A059] mt-1 font-black">اضغط رد للإجابة وبدء مكالمة {type === 'video' ? 'الفيديو التفاعلية' : 'الصوتية'}</p>
             </div>
 
             {/* Answer and Reject Controls */}
@@ -326,7 +326,7 @@ export default function VideoCallScreen({
               <button
                 id="reject_call_btn"
                 onClick={onRejectCall}
-                className="w-14 h-14 rounded-full bg-[#FF4B4B] hover:bg-[#FF4B4B]/90 text-white flex items-center justify-center shadow-xl shadow-[#FF4B4B]/20 active:scale-95 transition-transform"
+                className="w-14 h-14 rounded-full bg-[#FF4B4B] hover:bg-[#FF4B4B]/90 text-white flex items-center justify-center shadow-xl shadow-[#FF4B4B]/20 active:scale-95 transition-transform cursor-pointer"
                 title="رفض المكالمة"
               >
                 <PhoneOff className="w-6 h-6" />
@@ -334,7 +334,7 @@ export default function VideoCallScreen({
               <button
                 id="accept_call_btn"
                 onClick={onAcceptCall}
-                className="w-16 h-16 rounded-full bg-[#556B2F] hover:bg-[#556B2F]/90 text-white flex items-center justify-center shadow-xl shadow-[#556B2F]/20 active:scale-95 transition-transform animate-pulse"
+                className="w-16 h-16 rounded-full bg-[#C5A059] hover:bg-[#C5A059]/90 text-stone-950 flex items-center justify-center shadow-xl shadow-[#C5A059]/20 active:scale-95 transition-transform animate-pulse cursor-pointer"
                 title="الرد على المكالمة"
               >
                 <Phone className="w-7 h-7" />
@@ -472,8 +472,8 @@ export default function VideoCallScreen({
                   <button
                     id="share_screen_btn"
                     onClick={onToggleScreenShare}
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-lg active:scale-95 ${
-                      isScreenSharing ? 'bg-[#556B2F] hover:bg-[#556B2F]/90 text-white' : 'bg-[#E5E1D8] hover:bg-[#E5E1D8]/80 text-[#2D2D2D]'
+                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-lg active:scale-95 cursor-pointer ${
+                      isScreenSharing ? 'bg-[#C5A059] text-[#0A0A09]' : 'bg-[#121211] border border-[#2E2E2A] text-stone-300 hover:bg-[#1C1C1A]'
                     }`}
                     title={isScreenSharing ? 'إيقاف مشاركة الشاشة' : 'مشاركة الشاشة'}
                   >
@@ -487,8 +487,8 @@ export default function VideoCallScreen({
                     <button
                       id="virtual_bg_btn"
                       onClick={() => setShowBgSelector(!showBgSelector)}
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95 ${
-                        virtualBg !== 'none' ? 'bg-emerald-600 text-white' : 'bg-[#E5E1D8] hover:bg-[#E5E1D8]/80 text-[#2D2D2D]'
+                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95 cursor-pointer ${
+                        virtualBg !== 'none' ? 'bg-[#C5A059] text-[#0A0A09]' : 'bg-[#121211] border border-[#2E2E2A] text-stone-300 hover:bg-[#1C1C1A]'
                       }`}
                       title="الخلفيات الافتراضية والتأثيرات"
                     >
@@ -496,8 +496,8 @@ export default function VideoCallScreen({
                     </button>
 
                     {showBgSelector && (
-                      <div className="absolute bottom-14 right-1/2 translate-x-1/2 w-48 bg-white border border-[#E5E1D8] rounded-2xl shadow-2xl p-2 z-[110] text-right animate-fadeIn">
-                        <p className="text-[10px] font-extrabold text-[#A8A293] px-2.5 py-1.5 border-b border-[#F2F0E9] mb-1">الخلفيات الافتراضية</p>
+                      <div className="absolute bottom-14 right-1/2 translate-x-1/2 w-48 bg-[#0D0D0C] border border-[#2E2E2A] rounded-2xl shadow-2xl p-2 z-[110] text-right animate-fadeIn">
+                        <p className="text-[10px] font-black text-[#A89F91] px-2.5 py-1.5 border-b border-[#2E2E2A]/60 mb-1">الخلفيات الافتراضية</p>
                         {VIRTUAL_BACKGROUNDS.map((bg) => (
                           <button
                             key={bg.id}
@@ -505,12 +505,12 @@ export default function VideoCallScreen({
                               setVirtualBg(bg.id as any);
                               setShowBgSelector(false);
                             }}
-                            className={`w-full text-right px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors ${
-                              virtualBg === bg.id ? 'bg-[#556B2F]/10 text-[#556B2F] font-bold' : 'hover:bg-[#F2F0E9] text-[#2D2D2D]'
+                            className={`w-full text-right px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
+                              virtualBg === bg.id ? 'bg-[#C5A059]/15 text-[#C5A059] font-black' : 'hover:bg-[#1C1C1A] text-stone-300'
                             }`}
                           >
                             <span>{bg.name}</span>
-                            {virtualBg === bg.id && <span className="w-2 h-2 bg-[#556B2F] rounded-full"></span>}
+                            {virtualBg === bg.id && <span className="w-2 h-2 bg-[#C5A059] rounded-full"></span>}
                           </button>
                         ))}
                       </div>
