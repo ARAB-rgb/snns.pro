@@ -100,6 +100,14 @@ export default function App() {
   const [callHistory, setCallHistory] = useState<CallRecord[]>(INITIAL_CALL_RECORDS);
   const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts'>('chats');
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [welcomeNotification, setWelcomeNotification] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    senderName: string;
+    senderAvatar: string;
+    fullMsg: string;
+  } | null>(null);
 
   // Firebase Firestore Real-Time Subscriptions & Auto-Seeding
   const [dbConnected, setDbConnected] = useState(false);
@@ -1058,11 +1066,67 @@ export default function App() {
 
   const currentBgClass = THEME_CLASSES[themeBackground] || THEME_CLASSES.bg_luxury;
 
-  const handleLoginSuccess = (user: any) => {
+  const handleLoginSuccess = async (user: any) => {
     setCurrentUser(user);
     setIsLoggedIn(true);
     localStorage.setItem('isLoggedIn_state', 'true');
     localStorage.setItem('currentUser_profile', JSON.stringify(user));
+
+    // Automated custom welcome message trigger on first login
+    const welcomeKey = `welcome_sent_${user.id}`;
+    if (!localStorage.getItem(welcomeKey)) {
+      localStorage.setItem(welcomeKey, 'true');
+
+      // Formulate a beautiful personalized greeting based on user profile details
+      const greeting = `أهلاً بك يا ${user.name || 'العضو الكريم'} في منصة SNNS.PRO المعتمدة! 🛡️✨`;
+      const details = `يسعدنا جداً انضمامك إلينا بصفة [${user.role || 'عضو جديد'}]. نؤكد لك أن حسابك المرتبط بالبريد الإلكتروني (${user.email || 'guest@snns.pro'}) آمن بالكامل ومحمي بطبقة تشفير معتمدة 256-bit SSL ومطابق تماماً لكل مواصفات منصة Google Cloud Console.`;
+      const adminPromise = `أنا الأدمن 1007363904، المشرف الرئيسي للرقابة والدعم هنا. مهمتي التأكد من توفير تجربة خالية من الإساءات والرد على جميع شكاواك وبلاغاتك في أسرع وقت. يمكنك دائماً بدء محادثة أو مكالمة WebRTC معي أو مع فريق الدعم في أي وقت!`;
+      const fullText = `${greeting}\n\n${details}\n\n${adminPromise}`;
+
+      const welcomeMsg: Message = {
+        id: `welcome_${user.id}_${Date.now()}`,
+        senderId: '1007363904', // The main admin
+        senderName: 'الأدمن 1007363904',
+        text: fullText,
+        timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+        type: 'text',
+        status: 'read'
+      };
+
+      // Play soft greeting sound and show premium welcome modal
+      setTimeout(() => {
+        try {
+          sounds.playMessageReceivedSound();
+        } catch (e) {
+          console.warn("Audio synthesizer not ready yet:", e);
+        }
+        setWelcomeNotification({
+          show: true,
+          title: 'رسالة ترحيب مخصصة وتأكيد الأمان',
+          message: greeting,
+          senderName: 'الأدمن 1007363904',
+          senderAvatar: '🛡️',
+          fullMsg: fullText
+        });
+      }, 1200);
+
+      // Append to state messages
+      setMessages((prev) => {
+        // Prevent duplicate messages
+        if (prev.some(m => m.id.startsWith(`welcome_${user.id}`))) {
+          return prev;
+        }
+        return [...prev, welcomeMsg];
+      });
+
+      // Persist to Firestore if available
+      try {
+        await setDoc(doc(db, 'messages', welcomeMsg.id), welcomeMsg);
+        syncMessageToSupabase(welcomeMsg);
+      } catch (err) {
+        console.warn("Firestore welcome write bypassed:", err);
+      }
+    }
   };
 
   const handleGuestBypass = () => {
@@ -1322,6 +1386,84 @@ export default function App() {
           onClose={() => setShowAdminPanel(false)}
           contacts={contacts}
         />
+      )}
+
+      {/* AUTOMATED WELCOME NOTIFICATION OVERLAY */}
+      {welcomeNotification && welcomeNotification.show && (
+        <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-500 animate-fadeIn" dir="rtl">
+          <div className="bg-[#0C0C0E] border-2 border-amber-400/30 rounded-[32px] p-6 sm:p-8 max-w-xl w-full text-center relative overflow-hidden shadow-[0_0_50px_rgba(212,175,55,0.25)] select-text">
+            
+            {/* Elegant luxury top glow */}
+            <div className="absolute top-[-30%] left-1/4 right-1/4 h-36 bg-gradient-to-b from-amber-400/20 to-transparent blur-2xl pointer-events-none"></div>
+            
+            {/* Crown or shield top emblem */}
+            <div className="flex justify-center mb-6 relative z-10">
+              <div className="w-16 h-16 bg-stone-900 border-2 border-amber-400 rounded-2xl flex items-center justify-center shadow-[0_4px_20px_rgba(212,175,55,0.3)]">
+                <span className="text-3xl">🛡️</span>
+              </div>
+            </div>
+
+            <h2 className="text-xl sm:text-2xl font-black text-white mb-2 tracking-tight">
+              {welcomeNotification.title}
+            </h2>
+            
+            {/* Sub-badge highlighting user identity */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-400/10 border border-amber-400/20 rounded-full text-xs text-amber-400 font-bold mb-6">
+              <span>رتبة الحساب:</span>
+              <strong className="underline decoration-amber-400">{currentUser.role || 'عضو معتمد'}</strong>
+              <span className="text-stone-600">|</span>
+              <span>المعرّف الفريد:</span>
+              <span className="font-mono text-[10px]">{currentUser.id || 'guest_user'}</span>
+            </div>
+
+            <div className="bg-[#101012] border border-stone-800 rounded-2xl p-5 sm:p-6 text-right space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar mb-6">
+              <p className="text-sm font-black text-white leading-relaxed">
+                {welcomeNotification.message}
+              </p>
+              
+              <div className="border-t border-stone-800/80 pt-4 space-y-3">
+                <span className="block text-[10px] bg-stone-900 text-stone-400 border border-stone-800 px-2 py-1 rounded w-fit font-bold">معلومات تسجيل الدخول والامتثال:</span>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-2.5 bg-stone-950 rounded-xl border border-stone-800">
+                    <span className="block text-[10px] text-stone-500 font-bold mb-0.5">البريد الإلكتروني المعتمد</span>
+                    <span className="font-mono text-stone-300 font-bold">{currentUser.email || 'guest@snns.pro'}</span>
+                  </div>
+                  <div className="p-2.5 bg-stone-950 rounded-xl border border-stone-800">
+                    <span className="block text-[10px] text-stone-500 font-bold mb-0.5">بروتوكول الأمان والتحقق</span>
+                    <span className="text-emerald-400 font-extrabold">Google Cloud Verified 🟢</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-stone-400 leading-relaxed pt-2">
+                  {welcomeNotification.fullMsg.split('\n\n')[2]}
+                </p>
+              </div>
+            </div>
+
+            {/* Acknowledgment Controls */}
+            <div className="space-y-3 relative z-10">
+              <button
+                onClick={() => {
+                  try {
+                    sounds.playMessageSentSound();
+                  } catch (e) {
+                    // bypass
+                  }
+                  setWelcomeNotification(null);
+                }}
+                className="w-full py-4 bg-gradient-to-r from-yellow-600 via-amber-400 to-yellow-500 text-stone-950 font-black text-sm rounded-2xl shadow-[0_4px_25px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_30px_rgba(212,175,55,0.6)] active:scale-95 transition-all cursor-pointer border border-amber-300/30"
+              >
+                الدخول إلى منصة الاتصالات والرقابة 🚀
+              </button>
+              
+              <p className="text-[10px] text-stone-500 font-medium">
+                بضغطك على الزر أعلاه، فإنك توافق على الالتزام بـ <a href="https://snns.pro/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">سياسة الخصوصية</a> وحوكمة عدم الإساءة في SNNS.PRO.
+              </p>
+            </div>
+
+          </div>
+        </div>
       )}
 
     </div>

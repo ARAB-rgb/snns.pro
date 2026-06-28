@@ -19,7 +19,9 @@ import {
   Pause, 
   X,
   Volume2,
-  AlertTriangle
+  AlertTriangle,
+  Camera,
+  RefreshCw
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { db } from '../lib/firebase';
@@ -83,6 +85,99 @@ export default function ChatArea({
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [complaintText, setComplaintText] = useState('');
   const [submittingComplaint, setSubmittingComplaint] = useState(false);
+
+  // Camera Capture States
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Auto handle camera stream setup/cleanup based on modal visibility
+  useEffect(() => {
+    let activeStream: MediaStream | null = null;
+    if (showCameraModal) {
+      setCameraError(null);
+      setCapturedImage(null);
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false
+        }).then((stream) => {
+          activeStream = stream;
+          setCameraStream(stream);
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        }).catch((err: any) => {
+          console.error("Camera access failed:", err);
+          setCameraError("فشل الوصول إلى الكاميرا. يرجى التحقق من أذونات الكاميرا وتجربة فتح المنصة في نافذة مستقلة.");
+        });
+      } else {
+        setCameraError("الكاميرا غير مدعومة في متصفحك الحالي.");
+      }
+    }
+
+    return () => {
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [showCameraModal]);
+
+  const handleRecapture = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setCapturedImage(null);
+    setCameraError(null);
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
+      }).then((stream) => {
+        setCameraStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }).catch((err: any) => {
+        console.error("Camera recapture failed:", err);
+        setCameraError("فشل إعادة تشغيل الكاميرا.");
+      });
+    } else {
+      setCameraError("الكاميرا غير مدعومة.");
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setCapturedImage(dataUrl);
+        // Stop stream once captured
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
+        }
+      }
+    }
+  };
+
+  const handleSendCapturedImage = () => {
+    if (capturedImage) {
+      onSendMessage('صورة كاميرا مباشرة 📸', 'image', { mediaUrl: capturedImage });
+      setShowCameraModal(false);
+      setCapturedImage(null);
+    }
+  };
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recordTimerRef = useRef<any>(null);
@@ -684,17 +779,27 @@ export default function ChatArea({
 
         {/* Attachment menu */}
         {showAttachmentMenu && (
-          <div className="absolute bottom-16 right-12 bg-white border border-[#E5E1D8] p-2 rounded-xl shadow-2xl flex flex-col gap-1 z-50 animate-fadeIn w-36">
+          <div className="absolute bottom-16 right-12 bg-white border border-[#E5E1D8] p-2 rounded-xl shadow-2xl flex flex-col gap-1 z-50 animate-fadeIn w-48">
+            <button
+              onClick={() => {
+                setShowCameraModal(true);
+                setShowAttachmentMenu(false);
+              }}
+              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg text-right font-bold transition-all"
+            >
+              <Camera className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>التقاط من الكاميرا 📷</span>
+            </button>
             <button
               onClick={simulateSendImage}
-              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg"
+              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg text-right font-semibold transition-all"
             >
               <ImageIcon className="w-3.5 h-3.5 text-[#556B2F]" />
-              <span>إرفاق صورة 📸</span>
+              <span>صورة افتراضية 🖼️</span>
             </button>
             <button
               onClick={simulateSendFile}
-              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg"
+              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg text-right font-semibold transition-all"
             >
               <FileIcon className="w-3.5 h-3.5 text-[#556B2F]/80" />
               <span>إرفاق ملف 📄</span>
@@ -864,6 +969,105 @@ export default function ChatArea({
                 إلغاء
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Camera Capture Modal */}
+      {showCameraModal && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4" dir="rtl">
+          <div className="bg-[#0C0C0E] border border-amber-400/30 rounded-[24px] p-5 sm:p-6 max-w-lg w-full shadow-[0_0_40px_rgba(212,175,55,0.15)] space-y-4 animate-scaleIn text-center relative">
+            
+            {/* Close Button */}
+            <button 
+              onClick={() => {
+                setShowCameraModal(false);
+                setCapturedImage(null);
+              }}
+              className="absolute top-4 left-4 p-1.5 bg-stone-900 border border-stone-800 rounded-full text-stone-400 hover:text-white hover:bg-stone-800 transition"
+              title="إغلاق"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2 justify-center text-amber-400">
+              <Camera className="w-5 h-5 animate-pulse" />
+              <h3 className="font-extrabold text-base text-stone-100">التقاط صورة مباشرة من الكاميرا</h3>
+            </div>
+
+            <p className="text-xs text-stone-400 leading-relaxed max-w-sm mx-auto">
+              التقط صورة حية الآن لمشاركتها فورياً في المحادثة مع أصدقائك أو فريق الدعم.
+            </p>
+
+            {/* Live Feed / Captured Image Display */}
+            <div className="relative w-full aspect-[4/3] bg-black border border-stone-800 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+              {cameraError ? (
+                <div className="p-4 text-center space-y-2">
+                  <span className="text-3xl block">⚠️</span>
+                  <p className="text-xs text-rose-400 font-bold leading-relaxed">{cameraError}</p>
+                  <button 
+                    onClick={handleRecapture}
+                    className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-stone-300 rounded-xl text-xs font-bold border border-stone-800 transition"
+                  >
+                    إعادة المحاولة
+                  </button>
+                </div>
+              ) : capturedImage ? (
+                <img 
+                  src={capturedImage} 
+                  alt="Captured frame" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <video 
+                  ref={videoRef}
+                  autoPlay 
+                  playsInline 
+                  muted
+                  className="w-full h-full object-cover transform scale-x-[-1]" 
+                />
+              )}
+
+              {/* Glowing active indicator */}
+              {!cameraError && !capturedImage && (
+                <span className="absolute top-3 right-3 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </div>
+
+            {/* Interactive Control Controls */}
+            <div className="flex gap-3 justify-center pt-2">
+              {capturedImage ? (
+                <>
+                  <button
+                    onClick={handleRecapture}
+                    className="flex-1 py-3 bg-stone-900 hover:bg-stone-800 text-stone-300 font-extrabold rounded-xl text-xs transition border border-stone-800 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>إعادة التقاط 🔄</span>
+                  </button>
+                  <button
+                    onClick={handleSendCapturedImage}
+                    className="flex-1 py-3 bg-gradient-to-r from-yellow-600 to-amber-400 text-stone-950 font-black rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-amber-400/10 border border-amber-300/20"
+                  >
+                    <Send className="w-3.5 h-3.5 rotate-180" />
+                    <span>إرسال الصورة 🚀</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={capturePhoto}
+                  disabled={!!cameraError}
+                  className="w-full py-3.5 bg-gradient-to-r from-yellow-600 via-amber-400 to-yellow-500 text-stone-950 font-black rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed border border-amber-300/20"
+                >
+                  <Camera className="w-4 h-4 text-stone-950" />
+                  <span>التقاط الصورة الآن 📸</span>
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
       )}
