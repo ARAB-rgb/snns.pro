@@ -1,9 +1,10 @@
 {
-  "projectId": "trans-passkey-dbndl",
-  "appId": "1:142628657197:web:fedef5d6974fcf1a00c0a4",
-  "apiKey": "AIzaSyCwE_KMxWJRlMDMUdiup2CietXJIMs2OhQ",
-  "authDomain": "trans-passkey-dbndl.firebaseapp.com",
-  "storageBucket": "trans-passkey-dbndl.firebasestorage.app",
-  "messagingSenderId": "142628657197",
+  "projectId": "snnspro-e688d",
+  "appId": "1:783095199260:web:3eb6ba873382f57ec011d9",
+  "apiKey": "AIzaSyAN5rMCkO3FkzfRFbFBtoGySruAzsJXLH0",
+  "authDomain": "snnspro-e688d.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-51ad5e39-6b73-48eb-ae50-73e623ce2805",
+  "storageBucket": "snnspro-e688d.firebasestorage.app",
+  "messagingSenderId": "783095199260",
   "measurementId": ""
 }
