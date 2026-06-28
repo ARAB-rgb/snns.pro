@@ -163,7 +163,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setLoading(true);
 
     if (!adminUsername || !adminPassword) {
-      setError('يرجى إدخال اسم المستخدم/الرقم التعريفي وكلمة المرور.');
+      setError('يرجى إدخال اسم المستخدم وكلمة المرور.');
       setLoading(false);
       return;
     }
@@ -200,11 +200,11 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           });
         }, 1200);
       } else {
-        setError('كلمة المرور المدخلة غير صحيحة للأدمن. جرب استخدام رقم الأدمن نفسه ككلمة مرور.');
+        setError('اسم المستخدم أو كلمة المرور غير صحيحة.');
         setLoading(false);
       }
     } else {
-      setError('معرّف الأدمن غير معترف به. يرجى استخدام المعرّفات المصرحة (1007363904 أو 139213).');
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة.');
       setLoading(false);
     }
   };
@@ -320,13 +320,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             </div>
           ) : (
             <form onSubmit={handleAdminAuth} className="space-y-4">
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs mb-2">
-                <span className="font-bold block mb-1">تنبيه المشرفين:</span>
-                المشرفون المصرح لهم هم الأدمن 1007363904 والأدمن 139213. يرجى إدخال الرقم التعريفي كاسم مستخدم.
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-800 text-xs mb-2">
+                <span className="font-bold block mb-1">تسجيل دخول المشرفين:</span>
+                خاص بمشرفي النظام المصرح لهم فقط. يرجى إدخال اسم المستخدم وكلمة المرور الخاصة بك للولوج إلى لوحة التحكم.
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">اسم المستخدم (الرقم التعريفي للأدمن)</label>
+                <label className="block text-xs font-semibold text-stone-600 mb-1">اسم المستخدم (المعرف الخاص بك)</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400">
                     <Shield className="w-4 h-4" />
@@ -335,7 +335,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     type="text"
                     dir="ltr"
                     className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-sm text-left"
-                    placeholder="مثال: 1007363904"
+                    placeholder="أدخل المعرف"
                     value={adminUsername}
                     onChange={(e) => setAdminUsername(e.target.value)}
                   />
