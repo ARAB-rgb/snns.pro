@@ -205,6 +205,22 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToGuest }: La
                 <span>دعم فني ومكتب استقبال بلاغات متاح على مدار الساعة للإجابة الفورية.</span>
               </li>
             </ul>
+
+            {/* Google OAuth Scope & Data Disclosure Card */}
+            <div className="bg-[#1C1C1A] border border-[#C5A059]/30 rounded-2xl p-4 space-y-3 mt-4 text-right">
+              <h4 className="text-xs font-black text-[#C5A059] flex items-center gap-1.5">
+                <Shield className="w-4 h-4" />
+                <span>سياسة استخدام البيانات والتحقق من Google OAuth:</span>
+              </h4>
+              <p className="text-[11px] text-[#A89F91] leading-relaxed">
+                يستخدم تطبيق <strong>SNNS.PRO</strong> نطاقات وصول Google المحدودة (email, profile, openid) بهدف وحيد وهو <strong>التحقق من هوية المستخدم وإنشاء حسابه بأمان</strong>. 
+              </p>
+              <div className="space-y-1.5 text-[10px] text-stone-300 leading-relaxed">
+                <p>• <strong>البريد الإلكتروني (Email):</strong> نستخدمه كمعرف فريد للربط الحسابي لتمكينك من تصفح الرسائل المشتركة.</p>
+                <p>• <strong>الاسم والصورة الشخصية (Profile & Avatar):</strong> نستخدمهما لعرض اسمك الرمزي وصورتك الشخصية لجهات الاتصال الأخرى أثناء الدردشة والمكالمات.</p>
+                <p>• <strong>مشاركة البيانات:</strong> لا نقوم مطلقاً بمشاركة، بيع، أو نقل أي بيانات مستخرجة من Google إلى أي جهات خارجية أو أطراف ثالثة، ويتم تخزينها بشكل مشفر في خوادمنا السحابية المؤمنة بـ SSL.</p>
+              </div>
+            </div>
           </div>
 
           <div className="mt-8 lg:mt-0 lg:w-96 bg-[#0A0A09] border border-[#2E2E2A]/70 rounded-2xl p-6 space-y-4 shadow-xl">
