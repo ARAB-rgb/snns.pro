@@ -160,6 +160,10 @@ export default function Sidebar({
   onUpdateContacts
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const isAdmin = currentUser.role?.includes('الأدمن') || 
+                  currentUser.name?.includes('الأدمن') || 
+                  currentUser.role?.includes('أدمن') || 
+                  currentUser.name?.includes('أدمن');
   const [showSimulateDropdown, setShowSimulateDropdown] = useState(false);
   const [showNewContactModal, setShowNewContactModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -283,6 +287,19 @@ export default function Sidebar({
 
   // Filter contacts based on search query AND hidden visibility
   const filteredContacts = contacts.filter((c) => {
+    // For non-admin (client) users, show ONLY the Admin contacts so they don't see anything else
+    if (!isAdmin) {
+      const isContactAdmin = c.id === '1007363904' || 
+                             c.id === '139213' || 
+                             c.name?.includes('الأدمن') || 
+                             c.role?.includes('الأدمن') || 
+                             c.name?.includes('أدمن') || 
+                             c.role?.includes('أدمن');
+      if (!isContactAdmin) {
+        return false;
+      }
+    }
+
     // 1. Privacy filter: Hide hidden contacts unless privacy mode is unlocked
     if (c.visibility === 'hidden' && !showHiddenContacts) {
       return false;
@@ -602,17 +619,19 @@ export default function Sidebar({
         {/* Action Controls */}
         <div className="flex items-center gap-1.5">
           {/* Privacy Toggle button */}
-          <button
-            onClick={handleTogglePrivacyMode}
-            title={showHiddenContacts ? "وضع الخصوصية نشط (اضغط للقفل)" : "إظهار جهات الاتصال المخفية (يتطلب رقم سري)"}
-            className={`p-2 rounded-xl border transition-all ${
-              showHiddenContacts 
-                ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100' 
-                : 'bg-[#FAF9F6] border-[#E5E1D8] text-[#A8A293] hover:text-[#2D2D2D]'
-            }`}
-          >
-            {showHiddenContacts ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleTogglePrivacyMode}
+              title={showHiddenContacts ? "وضع الخصوصية نشط (اضغط للقفل)" : "إظهار جهات الاتصال المخفية (يتطلب رقم سري)"}
+              className={`p-2 rounded-xl border transition-all ${
+                showHiddenContacts 
+                  ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100' 
+                  : 'bg-[#FAF9F6] border-[#E5E1D8] text-[#A8A293] hover:text-[#2D2D2D]'
+              }`}
+            >
+              {showHiddenContacts ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+            </button>
+          )}
 
           {/* App Settings Modal Trigger */}
           <button
@@ -637,16 +656,18 @@ export default function Sidebar({
           </button>
 
           {/* Call Simulator Button */}
-          <button 
-            id="simulate_call_btn"
-            onClick={() => setShowSimulateDropdown(!showSimulateDropdown)}
-            title="محاكاة مكالمة واردة"
-            className="p-2 hover:bg-[#E5E1D8] rounded-xl text-[#556B2F] hover:text-[#556B2F]/80 transition duration-150 flex items-center bg-[#556B2F]/10 border border-[#556B2F]/20"
-          >
-            <BellRing className="w-3.5 h-3.5 text-[#556B2F]" />
-          </button>
+          {isAdmin && (
+            <button 
+              id="simulate_call_btn"
+              onClick={() => setShowSimulateDropdown(!showSimulateDropdown)}
+              title="محاكاة مكالمة واردة"
+              className="p-2 hover:bg-[#E5E1D8] rounded-xl text-[#556B2F] hover:text-[#556B2F]/80 transition duration-150 flex items-center bg-[#556B2F]/10 border border-[#556B2F]/20"
+            >
+              <BellRing className="w-3.5 h-3.5 text-[#556B2F]" />
+            </button>
+          )}
 
-          {showSimulateDropdown && (
+          {isAdmin && showSimulateDropdown && (
             <div className="absolute left-4 top-16 z-50 w-56 bg-white rounded-xl border border-[#E5E1D8] shadow-xl overflow-hidden py-1 text-right">
               <div className="px-3 py-2 border-b border-[#E5E1D8] bg-[#FAF9F6]">
                 <span className="text-[11px] font-bold text-[#A8A293] block uppercase tracking-wider">اختر متصلاً لمحاكاة اتصال وارد:</span>
@@ -658,22 +679,22 @@ export default function Sidebar({
                     <span className="text-[10px] text-[#A8A293] font-normal">📞</span>
                   </div>
                   <button
-                    onClick={() => {
-                      onTriggerIncomingCall(c.id, 'video');
-                      setShowSimulateDropdown(false);
-                    }}
-                    className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F] hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
+                     onClick={() => {
+                       onTriggerIncomingCall(c.id, 'video');
+                       setShowSimulateDropdown(false);
+                     }}
+                     className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F] hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
                   >
-                    <span>🎥 فيديو (مثل تيمز/إيمو)</span>
+                     <span>🎥 فيديو (مثل تيمز/إيمو)</span>
                   </button>
                   <button
-                    onClick={() => {
-                      onTriggerIncomingCall(c.id, 'audio');
-                      setShowSimulateDropdown(false);
-                    }}
-                    className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F]/80 hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
+                     onClick={() => {
+                       onTriggerIncomingCall(c.id, 'audio');
+                       setShowSimulateDropdown(false);
+                     }}
+                     className="w-full text-right px-4 py-1.5 text-xs text-[#556B2F]/80 hover:bg-[#556B2F]/10 flex items-center gap-1.5 transition"
                   >
-                    <span>📞 صوتية (مثل واتساب)</span>
+                     <span>📞 صوتية (مثل واتساب)</span>
                   </button>
                 </div>
               ))}
@@ -947,35 +968,37 @@ export default function Sidebar({
             </div>
             
             {/* Tab selection header */}
-            <div className="flex border-b border-[#E5E1D8] bg-[#F9F8F6]">
-              <button
-                type="button"
-                className={`flex-1 py-3 text-center text-xs font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
-                  settingsTab === 'profile'
-                    ? 'border-[#556B2F] text-[#556B2F] bg-white'
-                    : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-[#E5E1D8]/25'
-                }`}
-                onClick={() => setSettingsTab('profile')}
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>البيانات الشخصية</span>
-              </button>
-              <button
-                type="button"
-                className={`flex-1 py-3 text-center text-xs font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
-                  settingsTab === 'supabase'
-                    ? 'border-[#556B2F] text-[#556B2F] bg-white'
-                    : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-[#E5E1D8]/25'
-                }`}
-                onClick={() => setSettingsTab('supabase')}
-              >
-                <Database className="w-3.5 h-3.5" />
-                <span>قاعدة Supabase</span>
-              </button>
-            </div>
+            {isAdmin ? (
+              <div className="flex border-b border-[#E5E1D8] bg-[#F9F8F6]">
+                <button
+                  type="button"
+                  className={`flex-1 py-3 text-center text-xs font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
+                    settingsTab === 'profile'
+                      ? 'border-[#556B2F] text-[#556B2F] bg-white'
+                      : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-[#E5E1D8]/25'
+                  }`}
+                  onClick={() => setSettingsTab('profile')}
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>البيانات الشخصية</span>
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-3 text-center text-xs font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
+                    settingsTab === 'supabase'
+                      ? 'border-[#556B2F] text-[#556B2F] bg-white'
+                      : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-[#E5E1D8]/25'
+                  }`}
+                  onClick={() => setSettingsTab('supabase')}
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  <span>قاعدة Supabase</span>
+                </button>
+              </div>
+            ) : null}
 
             <div className="p-5 space-y-4 overflow-y-auto max-h-[60vh] custom-scrollbar">
-              {settingsTab === 'profile' ? (
+              {settingsTab === 'profile' || !isAdmin ? (
                 <>
                   {/* Profile Details (Name & Photo) */}
                   <div className="space-y-3">
