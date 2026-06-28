@@ -16,7 +16,12 @@ import {
   writeBatch 
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './lib/firebase';
+import { logout as firebaseLogout } from './lib/firebaseAuth';
 import { syncUserToSupabase, syncMessageToSupabase, syncCallToSupabase } from './lib/supabase';
+import { 
+  requestNotificationPermission, 
+  showBrowserNotification 
+} from './utils/notifications';
 import { 
   Menu, 
   MessageSquare, 
@@ -247,6 +252,12 @@ export default function App() {
   }, [themeBackground]);
 
   useEffect(() => {
+    if (isLoggedIn) {
+      requestNotificationPermission().catch(console.error);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
     localStorage.setItem('showHiddenContacts_state', showHiddenContacts ? 'true' : 'false');
   }, [showHiddenContacts]);
 
@@ -376,12 +387,13 @@ export default function App() {
           case 'chat_message':
             // Receive real peer message
             const peerMsg = data.payload;
+            const peerSenderName = peerMsg.senderName || 'الطرف الآخر';
             setMessages((prev) => [
               ...prev,
               {
                 id: `real_${Date.now()}`,
                 senderId: data.clientId,
-                senderName: peerMsg.senderName || 'الطرف الآخر',
+                senderName: peerSenderName,
                 text: peerMsg.text,
                 type: peerMsg.type || 'text',
                 timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
@@ -389,6 +401,11 @@ export default function App() {
               }
             ]);
             sounds.playMessageReceivedSound();
+            showBrowserNotification({
+              title: peerSenderName,
+              body: peerMsg.text || 'أرسل رسالة جديدة 💬',
+              tag: `msg_${data.clientId}`,
+            });
             break;
           case 'call_action':
             const { action, type: peerCallType } = data.payload;
@@ -603,6 +620,7 @@ export default function App() {
     window.addEventListener('triggerGoogleOAuth', handleGoogleOAuth);
 
     const handleLogout = () => {
+      firebaseLogout().catch(err => console.error("Firebase logout error:", err));
       setIsLoggedIn(false);
       localStorage.removeItem('isLoggedIn_state');
       localStorage.removeItem('currentUser_profile');
@@ -752,6 +770,11 @@ export default function App() {
 
         setMessages((prev) => [...prev, replyMsg]);
         sounds.playMessageReceivedSound();
+        showBrowserNotification({
+          title: replyMsg.senderName,
+          body: replyMsg.text || 'أرسل رسالة جديدة 💬',
+          tag: `msg_${responderId}`,
+        });
         try {
           await setDoc(doc(db, 'messages', replyMsg.id), replyMsg);
           // Sync to Supabase asynchronously

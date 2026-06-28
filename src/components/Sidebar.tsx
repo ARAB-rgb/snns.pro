@@ -39,6 +39,12 @@ import {
   syncMessageToSupabase,
   syncCallToSupabase
 } from '../lib/supabase';
+import { 
+  areNotificationsEnabled, 
+  setNotificationsEnabled, 
+  requestNotificationPermission, 
+  showBrowserNotification 
+} from '../utils/notifications';
 
 interface SidebarProps {
   contacts: Contact[];
@@ -179,6 +185,7 @@ export default function Sidebar({
   const [editAvatarEmoji, setEditAvatarEmoji] = useState(currentUser.avatar);
   const [editAvatarUrl, setEditAvatarUrl] = useState(currentUser.avatarUrl || '');
   const [editUserStatus, setEditUserStatus] = useState<'online' | 'offline' | 'away'>(currentUser.status || 'online');
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(() => areNotificationsEnabled());
 
   // Privacy Pin states
   const [privacyPinInput, setPrivacyPinInput] = useState('');
@@ -614,6 +621,19 @@ export default function Sidebar({
             className="p-2 bg-[#FAF9F6] border border-[#E5E1D8] hover:bg-[#E5E1D8] rounded-xl text-[#2D2D2D] hover:text-[#556B2F] transition duration-150"
           >
             <Settings className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={() => {
+              if (confirm("هل تريد تسجيل الخروج من الحساب؟")) {
+                window.dispatchEvent(new CustomEvent('logout'));
+              }
+            }}
+            title="تسجيل الخروج"
+            className="p-2 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-xl text-rose-600 hover:text-rose-700 transition duration-150 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
           </button>
 
           {/* Call Simulator Button */}
@@ -1089,6 +1109,72 @@ export default function Sidebar({
                       <span className={`w-3.5 h-3.5 rounded-full border border-[#E5E1D8] ${theme.color}`}></span>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Browser Notifications Config */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-[#556B2F] border-b border-[#E5E1D8] pb-1">🔔 إشعارات المتصفح (Notification API):</h4>
+                <div className="bg-[#FAF9F6] border border-[#E5E1D8] rounded-xl p-3.5 text-right space-y-3 shadow-inner">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-[#2D2D2D]">تفعيل الإشعارات الفورية</p>
+                      <p className="text-[10px] text-[#A8A293] leading-relaxed">تلقي إشعارات في زاوية الشاشة عند وصول رسائل جديدة بينما التطبيق يعمل في الخلفية</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const nextState = !notificationsEnabled;
+                        if (nextState) {
+                          const perm = await requestNotificationPermission();
+                          if (perm === 'granted') {
+                            setNotificationsEnabled(true);
+                            setNotificationsEnabledState(true);
+                          } else {
+                            alert('⚠️ يرجى السماح بالإشعارات من إعدادات المتصفح أولاً لاستخدام هذه الميزة.');
+                          }
+                        } else {
+                          setNotificationsEnabled(false);
+                          setNotificationsEnabledState(false);
+                        }
+                      }}
+                      className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        notificationsEnabled ? 'bg-[#556B2F]' : 'bg-stone-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                          notificationsEnabled ? '-translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showBrowserNotification({
+                          title: 'إشعار تجريبي 🚀',
+                          body: 'مرحباً! نظام الإشعارات الفورية يعمل بنجاح في متصفحك.',
+                        });
+                      }}
+                      disabled={!notificationsEnabled}
+                      className="flex-1 py-1.5 bg-[#556B2F]/10 hover:bg-[#556B2F]/15 active:bg-[#556B2F]/20 disabled:opacity-50 text-[#556B2F] text-[10px] font-extrabold rounded-lg border border-[#556B2F]/20 transition cursor-pointer"
+                    >
+                      🧪 اختبار إشعار تجريبي
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const perm = await requestNotificationPermission();
+                        alert(`الحالة الحالية لإذن الإشعارات: ${perm === 'granted' ? '✅ مسموح بالكامل' : perm === 'denied' ? '❌ مرفوض في المتصفح' : '⏳ يتطلب الإذن'}`);
+                      }}
+                      className="flex-1 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-[10px] font-bold rounded-lg border border-stone-200 transition cursor-pointer"
+                    >
+                      🛡️ التحقق من الإذن
+                    </button>
+                  </div>
                 </div>
               </div>
 
