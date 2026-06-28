@@ -382,9 +382,14 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToGuest }: La
               <span>الموقع الرسمي للعلامة التجارية</span>
             </a>
             <span className="text-stone-700 hidden sm:inline">•</span>
-            <a href="https://snns.pro/privacy" target="_blank" rel="noopener noreferrer" className="text-[#A89F91] hover:text-rose-400 transition flex items-center gap-1">
+            <a href="https://snns.pro/privacy" target="_blank" rel="noopener noreferrer" className="text-[#A89F91] hover:text-[#C5A059] transition flex items-center gap-1">
               <Shield className="w-3.5 h-3.5" />
               <span>سياسة الخصوصية وسرية البيانات (Privacy Policy)</span>
+            </a>
+            <span className="text-stone-700 hidden sm:inline">•</span>
+            <a href="https://snns.pro/terms" target="_blank" rel="noopener noreferrer" className="text-[#A89F91] hover:text-[#C5A059] transition flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5" />
+              <span>شروط الاستخدام والخدمة (Terms of Use)</span>
             </a>
             <span className="text-stone-700 hidden sm:inline">•</span>
             <a href="mailto:s05564468888@gmail.com" className="text-[#A89F91] hover:text-[#C5A059] transition">

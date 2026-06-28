@@ -398,6 +398,32 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>تخطي تجريبي سريع (دخول فوري كضيف)</span>
           </button>
+
+          {/* Footer compliance links */}
+          <div className="pt-4 border-t border-[#2E2E2A]/50 text-center space-y-2.5 mt-2">
+            <div className="flex items-center justify-center gap-4 text-[11px] font-semibold text-[#A89F91]">
+              <a 
+                href="https://snns.pro/privacy" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-[#C5A059] transition flex items-center gap-1"
+              >
+                <span>سياسة الخصوصية</span>
+              </a>
+              <span className="text-stone-700">•</span>
+              <a 
+                href="https://snns.pro/terms" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-[#C5A059] transition flex items-center gap-1"
+              >
+                <span>شروط الاستخدام والخدمة</span>
+              </a>
+            </div>
+            <p className="text-[10px] text-stone-600">
+              جميع الحقوق محفوظة © {new Date().getFullYear()} SNNS.PRO
+            </p>
+          </div>
         </div>
       </div>
     </div>
