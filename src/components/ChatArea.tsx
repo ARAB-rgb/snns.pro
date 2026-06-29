@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Contact, Message, MessageReminder } from '../types';
 import BrandLogo from './BrandLogo';
 import { 
@@ -37,6 +38,7 @@ interface ChatAreaProps {
   activeContact: Contact | null;
   messages: Message[];
   onSendMessage: (text: string, type?: 'text' | 'image' | 'voice' | 'file' | 'video', extra?: any) => void;
+  onReactToMessage?: (messageId: string, emoji: string) => void;
   onStartCall: (contact: Contact, type: 'video' | 'audio') => void;
   onBackToSidebar: () => void; // for responsive mobile view
   isRealMode?: boolean;
@@ -91,6 +93,7 @@ export default function ChatArea({
   activeContact,
   messages,
   onSendMessage,
+  onReactToMessage,
   onStartCall,
   onBackToSidebar,
   isRealMode = false,
@@ -110,6 +113,29 @@ export default function ChatArea({
   const [isUsingSimulation, setIsUsingSimulation] = useState(false);
   const [chatWallpaper, setChatWallpaper] = useState(() => localStorage.getItem('chatWallpaper') || 'olive');
   const [showWallpaperMenu, setShowWallpaperMenu] = useState(false);
+  
+  // Reaction states
+  const [selectedMessageReactionId, setSelectedMessageReactionId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<any>(null);
+
+  const startLongPress = (messageId: string) => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      setSelectedMessageReactionId(messageId);
+      if (navigator.vibrate) {
+        try {
+          navigator.vibrate(40);
+        } catch (e) {}
+      }
+    }, 550);
+  };
+
+  const endLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
   
   // States for complaint/report center
   const [showComplaintModal, setShowComplaintModal] = useState(false);
@@ -782,23 +808,93 @@ export default function ChatArea({
         {filteredMessages.map((msg) => {
           const isMe = msg.senderId === 'me';
           return (
-            <div
+            <motion.div
               key={msg.id}
+              initial={{ opacity: 0, y: 16, x: isMe ? 25 : -25, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 25 }}
               className={`flex w-full ${isMe ? 'justify-start text-right' : 'justify-end text-right'}`}
             >
               <div className="flex gap-2.5 max-w-[80%] items-end">
                 {/* Avatar for remote participant */}
                 {!isMe && (
-                  <div className="w-7 h-7 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-xs select-none text-[#C5A059] overflow-hidden">
+                  <div className="w-8 h-8 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-md select-none text-[#C5A059] overflow-hidden shrink-0">
                     {msg.senderId === activeContact.id ? renderAvatarContent(activeContact.avatar, activeContact.name) : '👤'}
                   </div>
                 )}
 
-                <div className={`rounded-2xl p-3 shadow-md relative flex flex-col ${
-                  isMe 
-                    ? 'bg-gradient-to-l from-[#8A6E35] to-[#C5A059] text-stone-950 rounded-br-none shadow-[#C5A059]/10 font-medium' 
-                    : 'bg-[#121211] border border-[#2E2E2A] text-white rounded-bl-none'
-                }`}>
+                <div 
+                  onMouseDown={() => startLongPress(msg.id)}
+                  onMouseUp={endLongPress}
+                  onMouseLeave={endLongPress}
+                  onTouchStart={() => startLongPress(msg.id)}
+                  onTouchEnd={endLongPress}
+                  className={`p-3.5 shadow-lg relative flex flex-col transition-all duration-300 border select-none cursor-pointer ${
+                    isMe 
+                      ? 'bg-gradient-to-l from-[#8A6E35] to-[#C5A059] border-[#C5A059]/30 text-stone-950 font-semibold rounded-[22px] rounded-br-[6px] shadow-[#C5A059]/10' 
+                      : 'bg-[#121213] border-[#2E2E2A]/50 text-white rounded-[22px] rounded-bl-[6px]'
+                  }`}
+                >
+                  {/* Reaction Selection Overlay */}
+                  {selectedMessageReactionId === msg.id && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      className={`absolute z-50 p-1 bg-[#1A1A1A] border border-[#C5A059]/40 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.8)] flex items-center gap-1 -top-12 ${
+                        isMe ? 'left-0' : 'right-0'
+                      }`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'].map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReactToMessage?.(msg.id, emoji);
+                            setSelectedMessageReactionId(null);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center text-base hover:scale-135 transition-transform duration-150 cursor-pointer hover:bg-stone-800 rounded-full"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMessageReactionId(null);
+                        }}
+                        className="w-6 h-6 flex items-center justify-center text-stone-500 hover:text-white text-xs cursor-pointer ml-1"
+                      >
+                        ✕
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* Rendered Reactions Badge */}
+                  {msg.reactions && msg.reactions.length > 0 && (
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Clicking on the badge toggles/cycles the last reaction
+                        if (msg.reactions && msg.reactions.length > 0) {
+                          onReactToMessage?.(msg.id, msg.reactions[msg.reactions.length - 1]);
+                        }
+                      }}
+                      className={`absolute -bottom-2.5 flex gap-1 items-center bg-[#1A1A1A] border border-[#C5A059]/40 px-2.5 py-0.5 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-10 hover:scale-105 transition-transform duration-150 ${
+                        isMe ? 'left-4' : 'right-4'
+                      }`}
+                    >
+                      {Array.from(new Set(msg.reactions)).slice(0, 3).map((emoji, idx) => (
+                        <span key={idx} className="text-xs select-none">{emoji}</span>
+                      ))}
+                      {msg.reactions.length > 0 && (
+                        <span className="text-[9px] font-bold text-[#C5A059] mr-0.5">{msg.reactions.length}</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Sender name for group chats */}
                   {!isMe && activeContact.isGroup && (
                     <span className="text-[10px] font-extrabold text-[#C5A059] mb-1 block">
@@ -958,6 +1054,21 @@ export default function ChatArea({
                       }
                     })()}
 
+                    {/* Reaction Smiley Trigger */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedMessageReactionId(selectedMessageReactionId === msg.id ? null : msg.id);
+                      }}
+                      className={`p-0.5 rounded-full transition-all flex items-center justify-center cursor-pointer opacity-40 hover:opacity-100 ${
+                        isMe ? 'text-stone-950 hover:bg-white/20' : 'text-stone-400 hover:text-white hover:bg-[#2E2E2A]/60'
+                      }`}
+                      title="التفاعل بالرموز 👍❤️😂"
+                    >
+                      <Smile className="w-3.5 h-3.5" />
+                    </button>
+
                     <span className={`text-[9px] font-mono ${isMe ? 'text-white/80' : 'text-[#A8A293]'}`}>
                       {msg.timestamp}
                     </span>
@@ -967,27 +1078,31 @@ export default function ChatArea({
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
 
         {/* Typing indicator */}
         {activeContact.status === 'typing' && (
-          <div className="flex w-full justify-end text-right">
+          <motion.div 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="flex w-full justify-end text-right"
+          >
             <div className="flex gap-2.5 max-w-[80%] items-end">
-              <div className="w-7 h-7 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-sm shadow-xs select-none text-[#2D2D2D] overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-md select-none text-[#C5A059] overflow-hidden shrink-0">
                 {renderAvatarContent(activeContact.avatar, activeContact.name)}
               </div>
-              <div className="bg-white border border-[#E5E1D8] text-[#2D2D2D] rounded-2xl rounded-bl-none p-3.5 shadow-md flex items-center gap-1.5">
-                <span className="text-xs text-[#A8A293] font-bold">{activeContact.name} يكتب الآن</span>
+              <div className="bg-[#121213] border border-[#2E2E2A]/50 text-white rounded-[22px] rounded-bl-[6px] p-3.5 shadow-lg flex items-center gap-1.5">
+                <span className="text-xs text-stone-400 font-bold">{activeContact.name} يكتب الآن</span>
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#556B2F] rounded-full animate-bounce delay-75"></span>
-                  <span className="w-1.5 h-1.5 bg-[#556B2F] rounded-full animate-bounce delay-150"></span>
-                  <span className="w-1.5 h-1.5 bg-[#556B2F] rounded-full animate-bounce delay-300"></span>
+                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-75"></span>
+                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-150"></span>
+                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-300"></span>
                 </span>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div ref={messagesEndRef} />

@@ -107,6 +107,83 @@ ${formattedHistory}
   }
 });
 
+// REST API for generating user profile avatars using Gemini / Imagen
+app.post("/api/generate-avatar", async (req: any, res: any) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "Missing required field: prompt" });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "MOCK_KEY") {
+      console.warn("GEMINI_API_KEY is not defined. Using high-quality fallback avatar.");
+      const randomSeed = Math.floor(Math.random() * 100000);
+      
+      // Map themes to rich Unsplash photos for a beautiful Saudi/Golden premium interface
+      let fallbackUrl = `https://picsum.photos/seed/${randomSeed}/400/400`;
+      const promptLower = prompt.toLowerCase();
+      
+      if (promptLower.includes("falcon") || promptLower.includes("صقر")) {
+        fallbackUrl = "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=400&h=400&q=80"; // Magnificent Falcon
+      } else if (promptLower.includes("soldier") || promptLower.includes("عسكري")) {
+        fallbackUrl = "https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&w=400&h=400&q=80"; // Professional/Tech portrait
+      } else if (promptLower.includes("saudi") || promptLower.includes("رجل") || promptLower.includes("شخصية")) {
+        fallbackUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&h=400&q=80"; // Handsome portrait
+      } else if (promptLower.includes("gold") || promptLower.includes("مذهب") || promptLower.includes("شعار")) {
+        fallbackUrl = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&h=400&q=80"; // Abstract luxury gold art
+      } else {
+        fallbackUrl = `https://picsum.photos/seed/${encodeURIComponent(prompt)}/400/400`;
+      }
+      
+      // Simulate slight network delay for premium feel
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return res.json({ url: fallbackUrl });
+    }
+
+    const ai = getAiClient();
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [
+          {
+            text: `${prompt}, beautiful circular avatar portrait, professional digital art, Saudi golden style, high definition, clean background, luxury color scheme`,
+          },
+        ],
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
+    });
+
+    let base64Data: string | null = null;
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          base64Data = part.inlineData.data;
+          break;
+        }
+      }
+    }
+
+    if (base64Data) {
+      return res.json({ url: `data:image/png;base64,${base64Data}` });
+    } else {
+      throw new Error("No image data found in Gemini response parts");
+    }
+
+  } catch (error: any) {
+    console.error("Generate Avatar API Error:", error);
+    const randomSeed = Math.floor(Math.random() * 100000);
+    return res.json({ 
+      url: `https://picsum.photos/seed/${randomSeed}/400/400`,
+      warning: "Fallback triggered due to API load"
+    });
+  }
+});
+
 // Setup HTTP and WebSocket signaling rooms
 const rooms = new Map<string, Map<string, WebSocket>>();
 

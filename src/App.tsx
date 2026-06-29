@@ -794,6 +794,32 @@ export default function App() {
     return `${mins < 10 ? `0${mins}` : mins}:${remainingSecs < 10 ? `0${remainingSecs}` : remainingSecs}`;
   };
 
+  // Add emoji reaction to a message and sync to Firestore
+  const handleReactToMessage = async (messageId: string, emoji: string) => {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id === messageId) {
+          const currentReactions = m.reactions || [];
+          const updatedReactions = currentReactions.includes(emoji)
+            ? currentReactions.filter((r) => r !== emoji)
+            : [...currentReactions, emoji];
+          
+          const updatedMsg = { ...m, reactions: updatedReactions };
+          
+          try {
+            setDoc(doc(db, 'messages', messageId), updatedMsg, { merge: true }).catch((err) => {
+              console.error("Failed to sync reaction to Firestore:", err);
+            });
+          } catch (err) {
+            console.error("Firestore reaction write error:", err);
+          }
+          return updatedMsg;
+        }
+        return m;
+      })
+    );
+  };
+
   // Orcherstrate sending a message and triggering a response from Gemini
   const handleSendMessage = async (text: string, type: 'text' | 'image' | 'voice' | 'file' | 'video' = 'text', extra: any = {}) => {
     if (!activeContact) return;
@@ -1502,6 +1528,7 @@ export default function App() {
             activeContact={activeContact}
             messages={messages}
             onSendMessage={handleSendMessage}
+            onReactToMessage={handleReactToMessage}
             onStartCall={handleStartCall}
             onBackToSidebar={() => setSidebarOpen(true)}
             isRealMode={!!roomId}

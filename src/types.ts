@@ -24,6 +24,7 @@ export interface Message {
   fileName?: string;
   fileSize?: string;
   status: 'sent' | 'delivered' | 'read';
+  reactions?: string[]; // Emojis like 👍, ❤️, 😂, etc.
 }
 
 export interface CallRecord {

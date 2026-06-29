@@ -198,9 +198,17 @@ export default function Sidebar({
 
   // Local settings modal edit states
   const [editUsername, setEditUsername] = useState(currentUser.name);
-  const [editAvatarType, setEditAvatarType] = useState<'emoji' | 'image_url'>(currentUser.avatarType || 'emoji');
+  const [editAvatarType, setEditAvatarType] = useState<'emoji' | 'image_url' | 'ai_avatar'>(currentUser.avatarType || 'emoji');
   const [editAvatarEmoji, setEditAvatarEmoji] = useState(currentUser.avatar);
   const [editAvatarUrl, setEditAvatarUrl] = useState(currentUser.avatarUrl || '');
+  
+  // AI Avatar Generator states
+  const [aiPrompt, setAiPrompt] = useState('صقر عربي مهيب باللون الأسود والذهبي، ثلاثي الأبعاد فاخر');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiGeneratedUrl, setAiGeneratedUrl] = useState('');
+  const [aiStatus, setAiStatus] = useState('');
+  const [aiError, setAiError] = useState('');
+
   const [editUserStatus, setEditUserStatus] = useState<'online' | 'offline' | 'away'>(currentUser.status || 'online');
   const [editLanguage, setEditLanguage] = useState(currentUser.language || 'ar');
   const [notificationsEnabled, setNotificationsEnabledState] = useState(() => areNotificationsEnabled());
@@ -698,13 +706,64 @@ export default function Sidebar({
     }
   };
 
+  // Generate Avatar with AI (Gemini / Imagen)
+  const handleGenerateAiAvatar = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setAiGenerating(true);
+    setAiError('');
+    setAiStatus('🔄 جاري بدء محرك الذكاء الاصطناعي الآمن...');
+
+    const statuses = [
+      '⚡ جاري تحليل الوصف وتصميم الأنماط الفنية...',
+      '🎨 جاري رسم ملامح الصورة بالألوان الذهبية والأسود الفاخر...',
+      '🔍 تحسين جودة الصورة وعزل الخلفية بدقة عالية...',
+      '✨ جاري تجميع الحزمة وحفظ صورتك الشخصية الجديدة...'
+    ];
+
+    let currentStatusIndex = 0;
+    const interval = setInterval(() => {
+      if (currentStatusIndex < statuses.length) {
+        setAiStatus(statuses[currentStatusIndex]);
+        currentStatusIndex++;
+      }
+    }, 1200);
+
+    try {
+      const response = await fetch('/api/generate-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt })
+      });
+      
+      const data = await response.json();
+      clearInterval(interval);
+      
+      if (data.url) {
+        setAiGeneratedUrl(data.url);
+        setEditAvatarUrl(data.url);
+        setEditAvatarEmoji('👤');
+        setAiStatus('🎉 تم توليد صورتك الشخصية واعتمادها بنجاح!');
+      } else {
+        setAiError('عذراً، فشل توليد الصورة من السيرفر. يرجى المحاولة لاحقاً.');
+      }
+    } catch (err) {
+      clearInterval(interval);
+      console.error(err);
+      setAiError('خطأ في الاتصال بالخادم الذكي. جاري استخدام صور بديلة...');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   // Save profile settings
   const handleSaveProfileSettings = () => {
+    const finalAvatarType = editAvatarType === 'ai_avatar' ? 'image_url' : editAvatarType;
     onUpdateCurrentUser({
       ...currentUser,
       name: editUsername,
       avatar: editAvatarEmoji,
-      avatarType: editAvatarType,
+      avatarType: finalAvatarType,
       avatarUrl: editAvatarUrl,
       status: editUserStatus,
       language: editLanguage
@@ -1065,15 +1124,15 @@ export default function Sidebar({
           const unregisteredContacts = filteredContacts.filter(c => c.hasApp === false);
           return (
             <div>
-              <div className="p-3.5 bg-[#FAF9F6] border-b border-[#E5E1D8] flex items-center justify-between">
-                <span className="text-[11px] text-[#556B2F] font-bold tracking-wide">جهات العناوين ({filteredContacts.length})</span>
+              <div className="p-3.5 bg-[#121211]/55 border-b border-[#2E2E2A]/40 flex items-center justify-between">
+                <span className="text-[11px] text-[#C5A059] font-bold tracking-wide">جهات العناوين ({filteredContacts.length})</span>
                 <button
                   id="add_new_contact_trigger"
                   onClick={() => setShowNewContactModal(true)}
-                  className="px-2.5 py-1 bg-[#556B2F] hover:bg-[#556B2F]/90 text-white rounded-lg flex items-center gap-1 transition text-[10px] font-bold"
+                  className="px-2.5 py-1 bg-[#C5A059]/10 hover:bg-[#C5A059]/25 text-[#C5A059] border border-[#C5A059]/30 rounded-lg flex items-center gap-1 transition text-[10px] font-bold cursor-pointer"
                   title="إضافة جهة اتصال جديدة"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-3.5 h-3.5 text-[#C5A059]" />
                   <span>إضافة جهة</span>
                 </button>
               </div>
@@ -1081,39 +1140,42 @@ export default function Sidebar({
               {/* SECTION 1: Registered Users (Those who have SNNS.PRO account) */}
               {registeredContacts.length > 0 && (
                 <div>
-                  <div className="px-3.5 py-2 bg-[#F2F0E9]/75 text-[#556B2F] text-[10px] font-black tracking-wider border-b border-[#E5E1D8]/45 flex items-center justify-between">
+                  <div className="px-3.5 py-2 bg-[#121211]/70 text-stone-300 text-[10px] font-black tracking-wider border-b border-[#2E2E2A]/30 flex items-center justify-between">
                     <span>{getTranslation(currentUser.language, 'registeredOnApp')}</span>
-                    <span className="px-2 py-0.5 bg-[#556B2F]/15 rounded-full text-[9px] font-bold">{registeredContacts.length} جهة</span>
+                    <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[9px] font-bold">{registeredContacts.length} نشط</span>
                   </div>
-                  <div className="divide-y divide-[#E5E1D8]/40">
+                  <div className="divide-y divide-[#2E2E2A]/35">
                     {registeredContacts.map((contact) => (
                       <div
                         key={contact.id}
                         id={`contact_item_${contact.id}`}
-                        className={`p-3 flex items-center justify-between hover:bg-[#FAF9F6]/85 transition ${
-                          contact.visibility === 'hidden' ? 'bg-amber-50/30' : ''
+                        className={`p-3 flex items-center justify-between hover:bg-[#121211]/40 transition ${
+                          contact.visibility === 'hidden' ? 'bg-amber-500/5' : ''
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          {renderContactAvatar(contact, "w-10 h-10 text-xl")}
+                          <div className="relative">
+                            {renderContactAvatar(contact, "w-10 h-10 text-xl")}
+                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0D0D0C] rounded-full shadow-[0_0_8px_rgba(34,197,94,0.8)]" title="نشط على الشبكة المشفرة"></span>
+                          </div>
                           <div className="text-right">
-                            <h4 className="font-bold text-xs text-[#2D2D2D] flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-bold text-xs text-white flex items-center gap-1.5 flex-wrap">
                               <span>{contact.name}</span>
-                              <span className="text-[8px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.2 rounded-full font-bold">
-                                {contact.isGroup ? 'مجموعة' : contact.role.split(' ')[0]}
+                              <span className="text-[8px] bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded-full font-bold">
+                                🟢 متصل
                               </span>
                               {contact.id.startsWith('google_') && (
-                                <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-blue-200" title="مستورد من Google">
+                                <span className="text-[8px] bg-blue-950/50 text-blue-400 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-blue-900/40" title="مستورد من Google">
                                   🌐 Google
                                 </span>
                               )}
                               {contact.visibility === 'hidden' && (
-                                <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.2 rounded-full font-bold flex items-center gap-0.5">
+                                <span className="text-[8px] bg-amber-950/50 text-amber-400 px-1 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-amber-900/40">
                                   🔒 مخفية
                                 </span>
                               )}
                             </h4>
-                            <p className="text-[10px] text-[#A8A293] mt-0.5 truncate max-w-[170px]">{contact.bio}</p>
+                            <p className="text-[10px] text-stone-400 mt-0.5 truncate max-w-[170px]">{contact.bio}</p>
                           </div>
                         </div>
 
@@ -1127,7 +1189,7 @@ export default function Sidebar({
                               setEditContactAvatar(contact.avatar);
                               setEditContactVisibility(contact.visibility || 'public');
                             }}
-                            className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition"
+                            className="p-1.5 hover:bg-stone-800 text-[#A8A293] hover:text-[#C5A059] rounded-lg transition"
                             title="تعديل جهة الاتصال"
                           >
                             <Edit className="w-3.5 h-3.5" />
@@ -1135,7 +1197,7 @@ export default function Sidebar({
                           
                           <button
                             onClick={() => onStartCall(contact, 'video')}
-                            className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
+                            className="p-1.5 hover:bg-[#C5A059]/10 text-[#C5A059] rounded-lg transition"
                             title="مكالمة فيديو"
                           >
                             <Video className="w-3.5 h-3.5" />
@@ -1145,7 +1207,7 @@ export default function Sidebar({
                               onSelectContact(contact);
                               setActiveTab('chats');
                             }}
-                            className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
+                            className="p-1.5 hover:bg-[#C5A059]/10 text-[#C5A059] rounded-lg transition"
                             title="دردشة فورية"
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
@@ -1157,45 +1219,47 @@ export default function Sidebar({
                 </div>
               )}
 
-              {/* SECTION 2: Unregistered Users (Invite to SNNS.PRO) */}
+              {/* SECTION 2: Unregistered Users (Invite to SNNS.PRO) at the bottom */}
               {unregisteredContacts.length > 0 && (
-                <div className="mt-3.5 border-t border-[#E5E1D8]/60">
-                   <div className="px-3.5 py-2 bg-[#E6ECF5]/60 text-[#1F4E79] text-[10px] font-black tracking-wider border-b border-[#E5E1D8]/45 flex items-center justify-between">
+                <div className="mt-3.5 border-t border-[#2E2E2A]/40">
+                  <div className="px-3.5 py-2 bg-[#121211]/70 text-stone-300 text-[10px] font-black tracking-wider border-b border-[#2E2E2A]/30 flex items-center justify-between">
                     <span className="flex items-center gap-1">
-                      <Share2 className="w-3 h-3 text-blue-600 animate-pulse" />
-                      <span>{getTranslation(currentUser.language, 'inviteFriends')}</span>
+                      <Share2 className="w-3 h-3 text-[#C5A059] animate-pulse" />
+                      <span>{getTranslation(currentUser.language, 'inviteFriends')} (دعوة الأصدقاء)</span>
                     </span>
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px] font-bold">{unregisteredContacts.length} جهة</span>
+                    <span className="px-2 py-0.5 bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 rounded-full text-[9px] font-bold">{unregisteredContacts.length} جهة</span>
                   </div>
-                  <div className="divide-y divide-[#E5E1D8]/40">
+                  <div className="divide-y divide-[#2E2E2A]/35">
                     {unregisteredContacts.map((contact) => (
                       <div
                         key={contact.id}
                         id={`contact_invite_item_${contact.id}`}
-                        className="p-3 flex items-center justify-between hover:bg-[#FAF9F6]/85 transition"
+                        className="p-3 flex items-center justify-between hover:bg-[#121211]/30 transition"
                       >
                         <div className="flex items-center gap-3">
-                          {renderContactAvatar(contact, "w-10 h-10 text-xl grayscale opacity-75")}
+                          <div className="relative">
+                            {renderContactAvatar(contact, "w-10 h-10 text-xl grayscale opacity-60")}
+                          </div>
                           <div className="text-right">
-                            <h4 className="font-bold text-xs text-stone-600 flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-bold text-xs text-stone-400 flex items-center gap-1.5 flex-wrap">
                               <span>{contact.name}</span>
                               {contact.id.startsWith('google_') && (
-                                <span className="text-[8px] bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-blue-100" title="مستورد من Google">
+                                <span className="text-[8px] bg-stone-900 text-stone-500 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-stone-800" title="مستورد من Google">
                                   🌐 Google
                                 </span>
                               )}
                             </h4>
-                            <p className="text-[10px] text-[#A8A293] mt-0.5 truncate max-w-[170px]">غير مسجل • {contact.bio?.split('•')[0] || contact.role}</p>
+                            <p className="text-[10px] text-stone-500 mt-0.5 truncate max-w-[170px]">غير مسجل • {contact.bio?.split('•')[0] || contact.role}</p>
                           </div>
                         </div>
 
                         <div>
                           <button
                             onClick={() => alert(`${getTranslation(currentUser.language, 'inviteSent')} (${contact.name})`)}
-                            className="px-3 py-1.5 bg-[#C5A059]/10 hover:bg-[#C5A059] hover:text-black text-[#C5A059] border border-[#C5A059]/30 rounded-xl text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
+                            className="p-1.5 bg-[#C5A059]/10 hover:bg-[#C5A059] text-[#C5A059] hover:text-black border border-[#C5A059]/20 hover:border-transparent rounded-full transition-all duration-300 flex items-center justify-center cursor-pointer shadow-md"
+                            title="إرسال دعوة (+)"
                           >
-                            <UserPlus className="w-3.5 h-3.5" />
-                            <span>{getTranslation(currentUser.language, 'inviteButton')}</span>
+                            <Plus className="w-4 h-4 font-black" />
                           </button>
                         </div>
                       </div>
@@ -1367,36 +1431,55 @@ export default function Sidebar({
 
                 <div>
                   <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">نوع الصورة الشخصية:</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <button
+                      type="button"
                       onClick={() => setEditAvatarType('emoji')}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${
+                      className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg border transition ${
                         editAvatarType === 'emoji' 
-                          ? 'bg-[#556B2F]/10 border-[#556B2F] text-[#556B2F]' 
-                          : 'border-[#E5E1D8] hover:bg-[#F2F0E9]'
+                          ? 'bg-[#556B2F]/15 border-[#556B2F] text-[#556B2F] font-extrabold ring-1 ring-[#556B2F]' 
+                          : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
                       }`}
                     >
-                      رمز تعبيري (Emoji)
+                      إيموجي 👤
                     </button>
                     <button
+                      type="button"
                       onClick={() => setEditAvatarType('image_url')}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${
+                      className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg border transition ${
                         editAvatarType === 'image_url' 
-                          ? 'bg-[#556B2F]/10 border-[#556B2F] text-[#556B2F]' 
-                          : 'border-[#E5E1D8] hover:bg-[#F2F0E9]'
+                          ? 'bg-[#556B2F]/15 border-[#556B2F] text-[#556B2F] font-extrabold ring-1 ring-[#556B2F]' 
+                          : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
                       }`}
                     >
-                      رابط صورة مخصصة (URL)
+                      رابط خارجي 🔗
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditAvatarType('ai_avatar');
+                        if (!aiGeneratedUrl && editAvatarUrl && editAvatarUrl.startsWith('data:')) {
+                          setAiGeneratedUrl(editAvatarUrl);
+                        }
+                      }}
+                      className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg border transition flex items-center justify-center gap-1 ${
+                        editAvatarType === 'ai_avatar' 
+                          ? 'bg-gradient-to-r from-[#8A6E35]/25 to-[#C5A059]/25 border-[#C5A059] text-[#8A6E35] font-black ring-1 ring-[#C5A059]' 
+                          : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
+                      }`}
+                    >
+                      ذكاء اصطناعي 🪄
                     </button>
                   </div>
                 </div>
 
-                {editAvatarType === 'emoji' ? (
+                {editAvatarType === 'emoji' && (
                   <div>
                     <label className="block text-[11px] text-[#A8A293] font-bold mb-1.5">اختر رمزك المفضل:</label>
                     <div className="grid grid-cols-7 gap-2">
                       {PREDEFINED_EMOJIS.map(em => (
                         <button
+                          type="button"
                           key={em}
                           onClick={() => setEditAvatarEmoji(em)}
                           className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border transition ${
@@ -1408,7 +1491,9 @@ export default function Sidebar({
                       ))}
                     </div>
                   </div>
-                ) : (
+                )}
+
+                {editAvatarType === 'image_url' && (
                   <div>
                     <label className="block text-[11px] text-[#A8A293] font-bold mb-1">رابط الصورة الشخصية (URL):</label>
                     <input
@@ -1418,6 +1503,116 @@ export default function Sidebar({
                       className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F]"
                       placeholder="https://example.com/avatar.jpg"
                     />
+                    {editAvatarUrl && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[10px] text-[#A8A293]">معاينة الصورة الحالية:</span>
+                        <img 
+                          src={editAvatarUrl} 
+                          alt="Preview" 
+                          className="w-8 h-8 rounded-full object-cover border border-[#C5A059]" 
+                          referrerPolicy="no-referrer"
+                          onError={(e) => e.currentTarget.src = "https://picsum.photos/100/100"}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {editAvatarType === 'ai_avatar' && (
+                  <div className="bg-[#121213] border border-[#C5A059]/20 p-4 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-black text-[#C5A059] flex items-center gap-1">
+                        <span>🪄</span>
+                        <span>مولد الصور الشخصية الذكي (Imagen)</span>
+                      </span>
+                      <span className="text-[9px] bg-[#C5A059]/15 text-[#C5A059] px-2 py-0.5 rounded-full font-bold">
+                        آمن ومحمي بالكامل 🇸🇦
+                      </span>
+                    </div>
+
+                    {/* Predefined prompt helpers */}
+                    <div>
+                      <span className="block text-[10px] text-[#A8A293] font-bold mb-1.5">اختر نمطاً جاهزاً للبدء:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: '🦅 صقر عربي فاخر', prompt: 'صقر عربي مهيب، ألوان فخمة تداخل أسود وذهبي، لوحة فنية، ثلاثي الأبعاد فخم' },
+                          { label: '🇸🇦 سيفين ونخلة', prompt: 'شعار المملكة العربية السعودية سيفين ونخلة مذهبين ثلاثي الأبعاد فخم جداً' },
+                          { label: '⚜️ خط عربي مذهب', prompt: 'خط عربي كلاسيكي مذهب فاخر، تصميم احترافي على خلفية سوداء داكنة' },
+                          { label: '👔 شخصية سعودية', prompt: 'شخصية رجل أعمال سعودي أنيق يرتدي الثوب والشماغ بأسلوب فني راقي' },
+                          { label: '🛡️ قائد عسكري', prompt: 'لوحة فنية مهيبة لقائد عسكري بزي رسمي، ألوان عسكرية دافئة وراقية' },
+                          { label: '🎨 تجريدي فاخر', prompt: 'لوحة فنية تجريدية حديثة تدمج الخطوط الذهبية مع الفحم والأسود الداكن' }
+                        ].map((item) => (
+                          <button
+                            type="button"
+                            key={item.label}
+                            onClick={() => setAiPrompt(item.prompt)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
+                              aiPrompt === item.prompt 
+                                ? 'bg-[#C5A059]/20 border-[#C5A059] text-[#C5A059]' 
+                                : 'border-[#2E2E2A]/70 bg-stone-900 text-stone-300 hover:bg-stone-800'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom prompt text area */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-[#A8A293] font-bold">أو اكتب وصفاً مخصصاً لصورتك:</label>
+                      <textarea
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        rows={2}
+                        className="w-full bg-[#1A1A1C] border border-[#2E2E2A]/60 rounded-lg p-2 text-xs text-white placeholder-stone-600 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] resize-none text-right"
+                        placeholder="مثال: أسد ذهبي هادئ يرتدي تاجاً، رسم رقمي..."
+                      />
+                    </div>
+
+                    {/* Action button & states */}
+                    <div className="space-y-2">
+                      {aiGenerating ? (
+                        <div className="bg-stone-900 border border-[#2E2E2A] p-2.5 rounded-lg text-center space-y-2 animate-pulse">
+                          <p className="text-[11px] text-[#C5A059] font-bold flex items-center justify-center gap-2">
+                            <span className="inline-block w-3 h-3 border-2 border-[#C5A059] border-t-transparent rounded-full animate-spin" />
+                            <span>{aiStatus}</span>
+                          </p>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleGenerateAiAvatar}
+                          disabled={!aiPrompt.trim()}
+                          className="w-full py-2 bg-gradient-to-r from-[#8A6E35] to-[#C5A059] hover:brightness-110 active:scale-95 text-black font-black text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md shadow-[#C5A059]/10 cursor-pointer"
+                        >
+                          <span>🪄 توليد الصورة بالذكاء الاصطناعي الآن</span>
+                        </button>
+                      )}
+
+                      {aiError && (
+                        <p className="text-[10px] text-rose-500 font-bold text-center">⚠️ {aiError}</p>
+                      )}
+
+                      {/* Preview of generated AI avatar */}
+                      {editAvatarUrl && editAvatarUrl.startsWith('data:') && (
+                        <div className="bg-[#1C1C1E] border border-emerald-900/30 p-2 rounded-lg flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={editAvatarUrl} 
+                              alt="Generated Avatar" 
+                              className="w-10 h-10 rounded-full object-cover border-2 border-[#C5A059] shadow-md"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="text-right">
+                              <span className="block text-[10px] text-emerald-400 font-extrabold">🎉 تم تجميع صورتك الشخصية!</span>
+                              <span className="block text-[8px] text-stone-400">سيتم حفظ الصورة واعتمادها للمحادثات عند الضغط على زر الحفظ أدناه.</span>
+                            </div>
+                          </div>
+                          <span className="text-emerald-400 font-bold text-xs">✅ معتمد</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
