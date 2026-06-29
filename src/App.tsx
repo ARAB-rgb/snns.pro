@@ -1192,6 +1192,13 @@ export default function App() {
     localStorage.setItem('isLoggedIn_state', 'true');
     localStorage.setItem('currentUser_profile', JSON.stringify(user));
 
+    if (user.importedContacts && user.importedContacts.length > 0) {
+      setContacts((prev) => {
+        const baseContacts = prev.filter(c => !c.id.startsWith('g') && !c.id.startsWith('google_'));
+        return [...user.importedContacts, ...baseContacts];
+      });
+    }
+
     // Automated custom welcome message trigger on first login
     const welcomeKey = `welcome_sent_${user.id}`;
     if (!localStorage.getItem(welcomeKey)) {
