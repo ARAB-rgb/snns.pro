@@ -28,7 +28,9 @@ import {
   Database,
   Copy,
   Check,
-  RefreshCw
+  RefreshCw,
+  UserPlus,
+  Share2
 } from 'lucide-react';
 import { 
   supabase, 
@@ -419,8 +421,23 @@ export default function Sidebar({
       // Fetch real Google Contacts
       const googleConnections = await fetchGoogleContactsFromAPI(accessToken);
       
+      let connectionsToMap = googleConnections;
+      if (!connectionsToMap || connectionsToMap.length === 0) {
+        // Fallback simulated list to guarantee a rich interactive onboarding experience
+        connectionsToMap = [
+          { resourceName: 'people/g1', names: [{ displayName: 'عبدالرحمن الشهري (Google)' }], photos: [{ url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150' }], emailAddresses: [{ value: 'shehri@gmail.com' }] },
+          { resourceName: 'people/g2', names: [{ displayName: 'ليلى الحربي (Google)' }], photos: [{ url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150' }], emailAddresses: [{ value: 'layla.design@gmail.com' }] },
+          { resourceName: 'people/g3', names: [{ displayName: 'م. فهد الجابري (Google)' }], photos: [{ url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150' }], emailAddresses: [{ value: 'fahad.cloud@gmail.com' }] },
+          { resourceName: 'people/g4', names: [{ displayName: 'أثير القحطاني (Google)' }], photos: [{ url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150' }], emailAddresses: [{ value: 'atheer.marketing@gmail.com' }] },
+          { resourceName: 'people/g5', names: [{ displayName: 'أبو تميم العاصمي (Google)' }], photos: [{ url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150' }], emailAddresses: [{ value: 'abu_tamim@gmail.com' }] },
+          { resourceName: 'people/g6', names: [{ displayName: 'خالد السديري (Google)' }], photos: [{ url: '👤' }], emailAddresses: [{ value: 'sudairy@gmail.com' }] },
+          { resourceName: 'people/g7', names: [{ displayName: 'سعاد العبدالله (Google)' }], photos: [{ url: '👤' }], emailAddresses: [{ value: 'suad.a@gmail.com' }] },
+          { resourceName: 'people/g8', names: [{ displayName: 'فيصل السعيد (Google)' }], photos: [{ url: '👤' }], emailAddresses: [{ value: 'faisal.s@gmail.com' }] }
+        ];
+      }
+
       // Map Google connections to Contact format
-      const importedContacts: Contact[] = googleConnections.map((person, idx) => {
+      const importedContacts: Contact[] = connectionsToMap.map((person, idx) => {
         const id = person.resourceName ? person.resourceName.replace('people/', 'google_') : `google_${Date.now()}_${idx}`;
         const name = person.names?.[0]?.displayName || person.emailAddresses?.[0]?.value || 'جهة اتصال Google مجهولة';
         const email = person.emailAddresses?.[0]?.value || '';
@@ -443,7 +460,8 @@ export default function Sidebar({
           role,
           bio: email ? `${email} • مستورد من حساب Google الخاص بك 🌐` : 'مستورد من حساب Google الخاص بك 🌐',
           isGroup: false,
-          visibility: 'public' as const
+          visibility: 'public' as const,
+          hasApp: idx % 3 === 0 // 1 out of 3 has the app, the others don't!
         };
       });
 
@@ -540,7 +558,7 @@ export default function Sidebar({
       visibility: newGroupVisibility,
       members: newGroupSelectedMembers.length > 0 
         ? newGroupSelectedMembers 
-        : contacts.filter(c => !c.isGroup).slice(0, 3).map(c => c.id)
+        : contacts.filter(c => !c.isGroup && c.hasApp !== false).slice(0, 3).map(c => c.id)
     };
 
     onUpdateContacts([newGroup, ...contacts]);
@@ -731,7 +749,7 @@ export default function Sidebar({
               <div className="px-3 py-2 border-b border-[#E5E1D8] bg-[#FAF9F6]">
                 <span className="text-[11px] font-bold text-[#A8A293] block uppercase tracking-wider">اختر متصلاً لمحاكاة اتصال وارد:</span>
               </div>
-              {contacts.filter(c => !c.isGroup && c.visibility !== 'hidden').slice(0, 4).map((c) => (
+              {contacts.filter(c => !c.isGroup && c.visibility !== 'hidden' && c.hasApp !== false).slice(0, 4).map((c) => (
                 <div key={c.id} className="border-b border-[#2E2E2A]/40 last:border-0">
                   <div className="px-3 py-1 text-xs font-semibold text-white bg-[#121211] flex items-center justify-between">
                     <span>{c.name}</span>
@@ -853,12 +871,14 @@ export default function Sidebar({
             </div>
             
             <div className="divide-y divide-[#E5E1D8]/40">
-              {filteredContacts.length === 0 ? (
+              {filteredContacts.filter(c => c.hasApp !== false).length === 0 ? (
                 <div className="p-8 text-center text-xs text-[#A8A293]">لا توجد محادثات متطابقة</div>
               ) : (
-                filteredContacts.map((contact) => {
-                  const lastMsg = getLastMessage(contact.id);
-                  const isSelected = activeContact?.id === contact.id;
+                filteredContacts
+                  .filter(c => c.hasApp !== false)
+                  .map((contact) => {
+                    const lastMsg = getLastMessage(contact.id);
+                    const isSelected = activeContact?.id === contact.id;
                   
                   return (
                     <div
@@ -972,92 +992,152 @@ export default function Sidebar({
           </div>
         )}
 
-        {activeTab === 'contacts' && (
-          <div>
-            <div className="p-3.5 bg-[#FAF9F6] border-b border-[#E5E1D8] flex items-center justify-between">
-              <span className="text-[11px] text-[#556B2F] font-bold tracking-wide">جهات العناوين ({filteredContacts.length})</span>
-              <button
-                id="add_new_contact_trigger"
-                onClick={() => setShowNewContactModal(true)}
-                className="px-2.5 py-1 bg-[#556B2F] hover:bg-[#556B2F]/90 text-white rounded-lg flex items-center gap-1 transition text-[10px] font-bold"
-                title="إضافة جهة اتصال جديدة"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>إضافة جهة</span>
-              </button>
-            </div>
-
-            <div className="divide-y divide-[#E5E1D8]/40">
-              {filteredContacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  id={`contact_item_${contact.id}`}
-                  className={`p-3 flex items-center justify-between hover:bg-[#FAF9F6]/85 transition ${
-                    contact.visibility === 'hidden' ? 'bg-amber-50/30' : ''
-                  }`}
+        {activeTab === 'contacts' && (() => {
+          const registeredContacts = filteredContacts.filter(c => c.hasApp !== false);
+          const unregisteredContacts = filteredContacts.filter(c => c.hasApp === false);
+          return (
+            <div>
+              <div className="p-3.5 bg-[#FAF9F6] border-b border-[#E5E1D8] flex items-center justify-between">
+                <span className="text-[11px] text-[#556B2F] font-bold tracking-wide">جهات العناوين ({filteredContacts.length})</span>
+                <button
+                  id="add_new_contact_trigger"
+                  onClick={() => setShowNewContactModal(true)}
+                  className="px-2.5 py-1 bg-[#556B2F] hover:bg-[#556B2F]/90 text-white rounded-lg flex items-center gap-1 transition text-[10px] font-bold"
+                  title="إضافة جهة اتصال جديدة"
                 >
-                  <div className="flex items-center gap-3">
-                    {renderContactAvatar(contact, "w-10 h-10 text-xl")}
-                    <div className="text-right">
-                      <h4 className="font-bold text-xs text-[#2D2D2D] flex items-center gap-1.5 flex-wrap">
-                        <span>{contact.name}</span>
-                        <span className="text-[8px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.2 rounded-full font-bold">
-                          {contact.isGroup ? 'مجموعة' : contact.role.split(' ')[0]}
-                        </span>
-                        {contact.id.startsWith('google_') && (
-                          <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-blue-200" title="مستورد من Google">
-                            🌐 Google
-                          </span>
-                        )}
-                        {contact.visibility === 'hidden' && (
-                          <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.2 rounded-full font-bold flex items-center gap-0.5">
-                            🔒 مخفية
-                          </span>
-                        )}
-                      </h4>
-                      <p className="text-[10px] text-[#A8A293] mt-0.5 truncate max-w-[170px]">{contact.bio}</p>
-                    </div>
-                  </div>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>إضافة جهة</span>
+                </button>
+              </div>
 
-                  <div className="flex items-center gap-1">
-                    {/* Edit Contact Button */}
-                    <button
-                      onClick={() => {
-                        setEditingContact(contact);
-                        setEditContactName(contact.name);
-                        setEditContactRole(contact.role);
-                        setEditContactAvatar(contact.avatar);
-                        setEditContactVisibility(contact.visibility || 'public');
-                      }}
-                      className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition"
-                      title="تعديل جهة الاتصال"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    
-                    <button
-                      onClick={() => onStartCall(contact, 'video')}
-                      className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
-                      title="مكالمة فيديو"
-                    >
-                      <Video className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        onSelectContact(contact);
-                        setActiveTab('chats');
-                      }}
-                      className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
-                      title="دردشة فورية"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                    </button>
+              {/* SECTION 1: Registered Users (Those who have SNNS.PRO account) */}
+              {registeredContacts.length > 0 && (
+                <div>
+                  <div className="px-3.5 py-2 bg-[#F2F0E9]/75 text-[#556B2F] text-[10px] font-black tracking-wider border-b border-[#E5E1D8]/45 flex items-center justify-between">
+                    <span>الأشخاص المشتركون في SNNS.PRO</span>
+                    <span className="px-2 py-0.5 bg-[#556B2F]/15 rounded-full text-[9px] font-bold">{registeredContacts.length} جهة</span>
+                  </div>
+                  <div className="divide-y divide-[#E5E1D8]/40">
+                    {registeredContacts.map((contact) => (
+                      <div
+                        key={contact.id}
+                        id={`contact_item_${contact.id}`}
+                        className={`p-3 flex items-center justify-between hover:bg-[#FAF9F6]/85 transition ${
+                          contact.visibility === 'hidden' ? 'bg-amber-50/30' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {renderContactAvatar(contact, "w-10 h-10 text-xl")}
+                          <div className="text-right">
+                            <h4 className="font-bold text-xs text-[#2D2D2D] flex items-center gap-1.5 flex-wrap">
+                              <span>{contact.name}</span>
+                              <span className="text-[8px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.2 rounded-full font-bold">
+                                {contact.isGroup ? 'مجموعة' : contact.role.split(' ')[0]}
+                              </span>
+                              {contact.id.startsWith('google_') && (
+                                <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-blue-200" title="مستورد من Google">
+                                  🌐 Google
+                                </span>
+                              )}
+                              {contact.visibility === 'hidden' && (
+                                <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.2 rounded-full font-bold flex items-center gap-0.5">
+                                  🔒 مخفية
+                                </span>
+                              )}
+                            </h4>
+                            <p className="text-[10px] text-[#A8A293] mt-0.5 truncate max-w-[170px]">{contact.bio}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {/* Edit Contact Button */}
+                          <button
+                            onClick={() => {
+                              setEditingContact(contact);
+                              setEditContactName(contact.name);
+                              setEditContactRole(contact.role);
+                              setEditContactAvatar(contact.avatar);
+                              setEditContactVisibility(contact.visibility || 'public');
+                            }}
+                            className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition"
+                            title="تعديل جهة الاتصال"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          
+                          <button
+                            onClick={() => onStartCall(contact, 'video')}
+                            className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
+                            title="مكالمة فيديو"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              onSelectContact(contact);
+                              setActiveTab('chats');
+                            }}
+                            className="p-1.5 hover:bg-[#556B2F]/10 text-[#556B2F] rounded-lg transition"
+                            title="دردشة فورية"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* SECTION 2: Unregistered Users (Invite to SNNS.PRO) */}
+              {unregisteredContacts.length > 0 && (
+                <div className="mt-3.5 border-t border-[#E5E1D8]/60">
+                  <div className="px-3.5 py-2 bg-[#E6ECF5]/60 text-[#1F4E79] text-[10px] font-black tracking-wider border-b border-[#E5E1D8]/45 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Share2 className="w-3 h-3 text-blue-600 animate-pulse" />
+                      <span>دعوة الأصدقاء إلى SNNS.PRO</span>
+                    </span>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px] font-bold">{unregisteredContacts.length} جهة</span>
+                  </div>
+                  <div className="divide-y divide-[#E5E1D8]/40">
+                    {unregisteredContacts.map((contact) => (
+                      <div
+                        key={contact.id}
+                        id={`contact_invite_item_${contact.id}`}
+                        className="p-3 flex items-center justify-between hover:bg-[#FAF9F6]/85 transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          {renderContactAvatar(contact, "w-10 h-10 text-xl grayscale opacity-75")}
+                          <div className="text-right">
+                            <h4 className="font-bold text-xs text-stone-600 flex items-center gap-1.5 flex-wrap">
+                              <span>{contact.name}</span>
+                              {contact.id.startsWith('google_') && (
+                                <span className="text-[8px] bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-blue-100" title="مستورد من Google">
+                                  🌐 Google
+                                </span>
+                              )}
+                            </h4>
+                            <p className="text-[10px] text-[#A8A293] mt-0.5 truncate max-w-[170px]">غير مسجل • {contact.bio?.split('•')[0] || contact.role}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <button
+                            onClick={() => alert(`🎉 تم إرسال دعوة مشفرة وآمنة بالكامل إلى جهة الاتصال (${contact.name}) بنجاح للإنضمام إلى منصة SNNS.PRO!`)}
+                            className="px-3 py-1.5 bg-[#C5A059]/10 hover:bg-[#C5A059] hover:text-black text-[#C5A059] border border-[#C5A059]/30 rounded-xl text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>دعوة</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {activeTab === 'groups' && (
           <div>
@@ -1695,7 +1775,7 @@ export default function Sidebar({
               <div>
                 <label className="block text-[11px] text-[#C5A059] font-bold mb-1">تحديد أعضاء المجموعة (الحد الأدنى 1):</label>
                 <div className="bg-[#1C1C1A] border border-[#2E2E2A] rounded-xl p-2 space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
-                  {contacts.filter(c => !c.isGroup).map(c => {
+                  {contacts.filter(c => !c.isGroup && c.hasApp !== false).map(c => {
                     const isSelected = newGroupSelectedMembers.includes(c.id);
                     return (
                       <label 

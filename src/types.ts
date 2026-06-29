@@ -9,6 +9,7 @@ export interface Contact {
   isGroup: boolean;
   members?: string[]; // Contact IDs in the group
   visibility?: 'public' | 'hidden'; // Contact visibility status
+  hasApp?: boolean; // Does this contact have SNNS.PRO account?
 }
 
 export interface Message {
