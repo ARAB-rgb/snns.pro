@@ -31,6 +31,7 @@ import {
 import { sounds } from '../utils/audio';
 import { db } from '../lib/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
+import { getTranslation } from '../utils/translations';
 
 interface ChatAreaProps {
   activeContact: Contact | null;
@@ -46,6 +47,7 @@ interface ChatAreaProps {
     avatar: string;
     email: string;
     role: string;
+    language?: string;
   };
   reminders?: MessageReminder[];
   onAddReminder?: (reminder: MessageReminder) => void;
@@ -1141,7 +1143,7 @@ export default function ChatArea({
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="اكتب رسالة فورية هنا..."
+                placeholder={getTranslation(currentUser.language, 'typeMessage')}
                 className="w-full bg-[#121211] border border-[#2E2E2A] rounded-xl py-2.5 pl-4 pr-4 text-xs sm:text-sm text-white placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] transition-colors"
               />
             </div>

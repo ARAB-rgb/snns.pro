@@ -25,6 +25,7 @@ import {
   requestNotificationPermission, 
   showBrowserNotification 
 } from './utils/notifications';
+import { LANGUAGES, getTranslation, TRANSLATIONS } from './utils/translations';
 import { 
   Menu, 
   MessageSquare, 
@@ -81,7 +82,8 @@ export default function App() {
       isGoogleLinked: false,
       googleEmail: '',
       status: 'offline' as 'online' | 'offline' | 'away',
-      role: ''
+      role: '',
+      language: ''
     };
   });
 
@@ -1295,8 +1297,12 @@ export default function App() {
     );
   }
 
+  const currentLangCode = currentUser.language || 'ar';
+  const currentLanguageObj = LANGUAGES.find(l => l.code === currentLangCode) || LANGUAGES[0];
+  const appDir = currentLanguageObj.dir;
+
   return (
-    <div className={`w-screen h-screen flex flex-col ${currentBgClass} overflow-hidden font-sans select-none`} dir="rtl">
+    <div className={`w-screen h-screen flex flex-col ${currentBgClass} overflow-hidden font-sans select-none`} dir={appDir}>
       
       {/* Top Main App Navigation Frame Bar - Luxury Dark Gold theme */}
       <div className="bg-[#0B0B0A] p-3.5 border-b border-[#2E2E2A]/70 flex items-center justify-between select-none px-4 shadow-xl shrink-0 z-20">
@@ -1592,6 +1598,50 @@ export default function App() {
               </p>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 🌐 FIRST-TIME LOGIN LANGUAGE SELECTION MODAL */}
+      {isLoggedIn && !currentUser.language && (
+        <div className="fixed inset-0 bg-[#0A0A09]/95 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-[#121211] border-2 border-[#C5A059]/40 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl text-center p-6 sm:p-8 space-y-6 animate-fadeIn relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-600 via-amber-400 to-yellow-500"></div>
+            
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-16 h-16 bg-[#1C1C1A] border-2 border-[#C5A059] rounded-2xl flex items-center justify-center shadow-lg text-4xl animate-bounce">
+                🌐
+              </div>
+              <h2 className="text-xl font-extrabold text-white mt-2">اختر لغتك / Choose Your Language</h2>
+              <p className="text-xs text-[#A8A293]">يرجى تحديد لغتك المفضلة لتصفح واستعمال منصة SNNS.PRO الآمنة</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[45vh] overflow-y-auto p-1.5 custom-scrollbar">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    const updatedUser = { ...currentUser, language: lang.code };
+                    setCurrentUser(updatedUser);
+                    localStorage.setItem('currentUser_profile', JSON.stringify(updatedUser));
+                    setDoc(doc(db, 'users', currentUser.id || 'main_profile'), updatedUser).catch(err => {
+                      console.error("Failed to update user language in Firestore:", err);
+                    });
+                  }}
+                  className="p-3.5 bg-[#1C1C1A] hover:bg-[#2E2E2A]/60 border border-[#2E2E2A] hover:border-[#C5A059]/50 rounded-xl flex items-center gap-2.5 transition text-right group cursor-pointer"
+                >
+                  <span className="text-2xl select-none group-hover:scale-110 transition shrink-0">{lang.flag}</span>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-xs font-bold text-white group-hover:text-[#C5A059] transition truncate">{lang.nativeName}</span>
+                    <span className="text-[10px] text-[#A8A293] truncate">{lang.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div className="pt-2 text-stone-500 text-[10px]">
+              يمكنك دائماً تغيير لغتك المفضلة لاحقاً من قسم الملف الشخصي والإعدادات.
+            </div>
           </div>
         </div>
       )}

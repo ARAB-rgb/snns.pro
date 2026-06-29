@@ -47,6 +47,7 @@ import {
   requestNotificationPermission, 
   showBrowserNotification 
 } from '../utils/notifications';
+import { LANGUAGES, getTranslation } from '../utils/translations';
 
 interface SidebarProps {
   contacts: Contact[];
@@ -71,6 +72,7 @@ interface SidebarProps {
     googleEmail?: string;
     status?: 'online' | 'offline' | 'away';
     role?: string;
+    language?: string;
   };
   onUpdateCurrentUser: (user: any) => void;
   themeBackground: string;
@@ -199,6 +201,7 @@ export default function Sidebar({
   const [editAvatarEmoji, setEditAvatarEmoji] = useState(currentUser.avatar);
   const [editAvatarUrl, setEditAvatarUrl] = useState(currentUser.avatarUrl || '');
   const [editUserStatus, setEditUserStatus] = useState<'online' | 'offline' | 'away'>(currentUser.status || 'online');
+  const [editLanguage, setEditLanguage] = useState(currentUser.language || 'ar');
   const [notificationsEnabled, setNotificationsEnabledState] = useState(() => areNotificationsEnabled());
 
   // Privacy Pin states
@@ -227,6 +230,7 @@ export default function Sidebar({
     setEditAvatarEmoji(currentUser.avatar);
     setEditAvatarUrl(currentUser.avatarUrl || '');
     setEditUserStatus(currentUser.status || 'online');
+    setEditLanguage(currentUser.language || 'ar');
     if (!showSettingsModal) {
       setSettingsTab('profile');
       setSyncMessage(null);
@@ -648,7 +652,8 @@ export default function Sidebar({
       avatar: editAvatarEmoji,
       avatarType: editAvatarType,
       avatarUrl: editAvatarUrl,
-      status: editUserStatus
+      status: editUserStatus,
+      language: editLanguage
     });
     setShowSettingsModal(false);
     alert("⚙️ تم حفظ تعديلات الملف الشخصي بنجاح.");
@@ -685,10 +690,10 @@ export default function Sidebar({
             </h2>
             <p className="text-[10px] text-[#A8A293] font-medium truncate max-w-[150px]">
               {currentUser.status === 'offline' 
-                ? 'غير متاح' 
+                ? getTranslation(currentUser.language, 'offline') 
                 : currentUser.status === 'away' 
-                  ? 'خارج (بعيد)' 
-                  : (currentUser.isGoogleLinked ? currentUser.googleEmail : 'متصل (جوال + كمبيوتر)')}
+                  ? getTranslation(currentUser.language, 'away') 
+                  : (currentUser.isGoogleLinked ? currentUser.googleEmail : getTranslation(currentUser.language, 'online'))}
             </p>
           </div>
         </div>
@@ -787,7 +792,7 @@ export default function Sidebar({
           <input
             id="search_contacts_input"
             type="text"
-            placeholder="البحث عن دردشة، مكالمة أو جهة اتصال..."
+            placeholder={getTranslation(currentUser.language, 'searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#121211] text-xs text-white pl-4 pr-10 py-2.5 rounded-xl border border-[#2E2E2A]/70 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] transition-colors placeholder-stone-500"
@@ -805,7 +810,7 @@ export default function Sidebar({
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span>الدردشات</span>
+          <span>{getTranslation(currentUser.language, 'chats')}</span>
           {activeTab === 'chats' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
         <button
@@ -816,7 +821,7 @@ export default function Sidebar({
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          <span>المجموعات</span>
+          <span>{getTranslation(currentUser.language, 'groups')}</span>
           {totalGroupsUnread > 0 ? (
             <span className="bg-rose-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full animate-pulse">
               {totalGroupsUnread}
@@ -834,7 +839,7 @@ export default function Sidebar({
           }`}
         >
           <Phone className="w-3.5 h-3.5" />
-          <span>المكالمات</span>
+          <span>{getTranslation(currentUser.language, 'calls')}</span>
           {activeTab === 'calls' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
         <button
@@ -845,7 +850,7 @@ export default function Sidebar({
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          <span>العناوين ({filteredContacts.length})</span>
+          <span>{getTranslation(currentUser.language, 'contacts')} ({filteredContacts.length})</span>
           {activeTab === 'contacts' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
       </div>
@@ -1014,7 +1019,7 @@ export default function Sidebar({
               {registeredContacts.length > 0 && (
                 <div>
                   <div className="px-3.5 py-2 bg-[#F2F0E9]/75 text-[#556B2F] text-[10px] font-black tracking-wider border-b border-[#E5E1D8]/45 flex items-center justify-between">
-                    <span>الأشخاص المشتركون في SNNS.PRO</span>
+                    <span>{getTranslation(currentUser.language, 'registeredOnApp')}</span>
                     <span className="px-2 py-0.5 bg-[#556B2F]/15 rounded-full text-[9px] font-bold">{registeredContacts.length} جهة</span>
                   </div>
                   <div className="divide-y divide-[#E5E1D8]/40">
@@ -1092,10 +1097,10 @@ export default function Sidebar({
               {/* SECTION 2: Unregistered Users (Invite to SNNS.PRO) */}
               {unregisteredContacts.length > 0 && (
                 <div className="mt-3.5 border-t border-[#E5E1D8]/60">
-                  <div className="px-3.5 py-2 bg-[#E6ECF5]/60 text-[#1F4E79] text-[10px] font-black tracking-wider border-b border-[#E5E1D8]/45 flex items-center justify-between">
+                   <div className="px-3.5 py-2 bg-[#E6ECF5]/60 text-[#1F4E79] text-[10px] font-black tracking-wider border-b border-[#E5E1D8]/45 flex items-center justify-between">
                     <span className="flex items-center gap-1">
                       <Share2 className="w-3 h-3 text-blue-600 animate-pulse" />
-                      <span>دعوة الأصدقاء إلى SNNS.PRO</span>
+                      <span>{getTranslation(currentUser.language, 'inviteFriends')}</span>
                     </span>
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px] font-bold">{unregisteredContacts.length} جهة</span>
                   </div>
@@ -1123,11 +1128,11 @@ export default function Sidebar({
 
                         <div>
                           <button
-                            onClick={() => alert(`🎉 تم إرسال دعوة مشفرة وآمنة بالكامل إلى جهة الاتصال (${contact.name}) بنجاح للإنضمام إلى منصة SNNS.PRO!`)}
+                            onClick={() => alert(`${getTranslation(currentUser.language, 'inviteSent')} (${contact.name})`)}
                             className="px-3 py-1.5 bg-[#C5A059]/10 hover:bg-[#C5A059] hover:text-black text-[#C5A059] border border-[#C5A059]/30 rounded-xl text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
                           >
                             <UserPlus className="w-3.5 h-3.5" />
-                            <span>دعوة</span>
+                            <span>{getTranslation(currentUser.language, 'inviteButton')}</span>
                           </button>
                         </div>
                       </div>
@@ -1352,6 +1357,29 @@ export default function Sidebar({
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Language Selector */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-[#556B2F] border-b border-[#E5E1D8] pb-1">🌐 لغة التطبيق (App Language):</h4>
+                <div className="relative">
+                  <select
+                    value={editLanguage}
+                    onChange={(e) => setEditLanguage(e.target.value)}
+                    className="w-full bg-[#F4F2EE] border border-[#E5E1D8] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:outline-none focus:ring-1 focus:ring-[#556B2F] appearance-none cursor-pointer"
+                  >
+                    {LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.flag} {lang.nativeName} ({lang.name})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#556B2F]">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
               {/* Theme Selector */}
