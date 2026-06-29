@@ -718,10 +718,10 @@ export default function Sidebar({
     .reduce((sum, c) => sum + getUnreadCount(c.id), 0);
 
   return (
-    <div id="app_sidebar" className="w-full md:w-96 flex flex-col h-full bg-[#FAF9F6] border-l border-[#E5E1D8] text-[#2D2D2D] select-none">
+    <div id="app_sidebar" className="w-full md:w-96 flex flex-col h-full bg-[#0B0B0A] border-l border-[#2E2E2A]/60 text-white select-none">
       
       {/* Header Info */}
-      <div className="p-4 bg-[#F2F0E9] border-b border-[#E5E1D8] flex items-center justify-between">
+      <div className="p-4 bg-[#121211] border-b border-[#2E2E2A]/60 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative cursor-pointer" onClick={() => setShowSettingsModal(true)} title="الملف الشخصي والإعدادات">
             {renderUserAvatar()}
@@ -761,8 +761,8 @@ export default function Sidebar({
               title={showHiddenContacts ? "وضع الخصوصية نشط (اضغط للقفل)" : "إظهار جهات الاتصال المخفية (يتطلب رقم سري)"}
               className={`p-2 rounded-xl border transition-all ${
                 showHiddenContacts 
-                  ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100' 
-                  : 'bg-[#FAF9F6] border-[#E5E1D8] text-[#A8A293] hover:text-[#2D2D2D]'
+                  ? 'bg-amber-500/20 border-amber-500 text-amber-400 hover:bg-amber-500/30' 
+                  : 'bg-[#121211] border-[#2E2E2A]/70 text-[#A89F91] hover:text-[#C5A059]'
               }`}
             >
               {showHiddenContacts ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
@@ -840,73 +840,82 @@ export default function Sidebar({
       </div>
 
       {/* Search Input */}
-      <div className="p-3 bg-[#0B0B0A] border-b border-[#2E2E2A]/60">
-        <div className="relative flex items-center">
-          <Search className="absolute right-3 w-4 h-4 text-[#C5A059]" />
+      <div className="p-3 bg-[#0B0B0A]/95 border-b border-[#2E2E2A]/40">
+        <div className="relative flex items-center apple-search-bar">
+          <Search className="absolute right-3 w-4 h-4 text-[#C5A059] pointer-events-none" />
           <input
             id="search_contacts_input"
             type="text"
             placeholder={getTranslation(currentUser.language, 'searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#121211] text-xs text-white pl-4 pr-10 py-2.5 rounded-xl border border-[#2E2E2A]/70 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] transition-colors placeholder-stone-500"
+            className="w-full bg-transparent text-xs text-white pl-4 pr-10 py-3 focus:outline-none transition-colors placeholder-stone-500 font-medium"
           />
         </div>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex bg-[#121211] border-b border-[#2E2E2A]/60 text-[11px] font-semibold text-stone-400 overflow-x-auto">
-        <button
-          id="tab_chats"
-          onClick={() => setActiveTab('chats')}
-          className={`flex-1 min-w-[70px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
-            activeTab === 'chats' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
-          }`}
-        >
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span>{getTranslation(currentUser.language, 'chats')}</span>
-          {activeTab === 'chats' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
-        </button>
-        <button
-          id="tab_groups"
-          onClick={() => setActiveTab('groups')}
-          className={`flex-1 min-w-[80px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
-            activeTab === 'groups' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>{getTranslation(currentUser.language, 'groups')}</span>
-          {totalGroupsUnread > 0 ? (
-            <span className="bg-rose-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full animate-pulse">
-              {totalGroupsUnread}
-            </span>
-          ) : (
-            <span className="text-[9px] text-stone-500">({contacts.filter(c => c.isGroup).length})</span>
-          )}
-          {activeTab === 'groups' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
-        </button>
-        <button
-          id="tab_calls"
-          onClick={() => setActiveTab('calls')}
-          className={`flex-1 min-w-[70px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
-            activeTab === 'calls' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
-          }`}
-        >
-          <Phone className="w-3.5 h-3.5" />
-          <span>{getTranslation(currentUser.language, 'calls')}</span>
-          {activeTab === 'calls' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
-        </button>
-        <button
-          id="tab_contacts"
-          onClick={() => setActiveTab('contacts')}
-          className={`flex-1 min-w-[70px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
-            activeTab === 'contacts' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>{getTranslation(currentUser.language, 'contacts')} ({filteredContacts.length})</span>
-          {activeTab === 'contacts' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
-        </button>
+      <div className="p-2 bg-[#0B0B0A] border-b border-[#2E2E2A]/40">
+        <div className="flex bg-[#121213] p-1 rounded-2xl text-[11px] font-bold text-stone-400 gap-1">
+          <button
+            id="tab_chats"
+            onClick={() => setActiveTab('chats')}
+            className={`flex-1 min-w-[65px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
+              activeTab === 'chats' 
+                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
+                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>{getTranslation(currentUser.language, 'chats')}</span>
+          </button>
+          
+          <button
+            id="tab_groups"
+            onClick={() => setActiveTab('groups')}
+            className={`flex-1 min-w-[70px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
+              activeTab === 'groups' 
+                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
+                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>{getTranslation(currentUser.language, 'groups')}</span>
+            {totalGroupsUnread > 0 ? (
+              <span className="bg-rose-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full animate-pulse">
+                {totalGroupsUnread}
+              </span>
+            ) : (
+              <span className="text-[9px] text-stone-500">({contacts.filter(c => c.isGroup).length})</span>
+            )}
+          </button>
+          
+          <button
+            id="tab_calls"
+            onClick={() => setActiveTab('calls')}
+            className={`flex-1 min-w-[65px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
+              activeTab === 'calls' 
+                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
+                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+            }`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>{getTranslation(currentUser.language, 'calls')}</span>
+          </button>
+          
+          <button
+            id="tab_contacts"
+            onClick={() => setActiveTab('contacts')}
+            className={`flex-1 min-w-[65px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
+              activeTab === 'contacts' 
+                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
+                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>{getTranslation(currentUser.language, 'contacts')} ({filteredContacts.length})</span>
+          </button>
+        </div>
       </div>
 
       {/* Dynamic List Content */}

@@ -11,9 +11,13 @@ import {
   CloudLightning, 
   Cpu, 
   HelpCircle,
-  QrCode
+  QrCode,
+  Sparkles,
+  Layers,
+  Info,
+  Smartphone as PhoneIcon,
+  Monitor
 } from 'lucide-react';
-import { getTranslation } from '../utils/translations';
 
 interface DownloadModalProps {
   isOpen: boolean;
@@ -21,37 +25,64 @@ interface DownloadModalProps {
   currentUserLanguage?: string;
 }
 
-type PlatformTab = 'android' | 'ios' | 'desktop' | 'chrome';
+type PlatformType = 'android' | 'ios' | 'windows' | 'mac' | 'linux';
 
 export default function DownloadModal({ isOpen, onClose, currentUserLanguage = 'ar' }: DownloadModalProps) {
-  const [activeTab, setActiveTab] = useState<PlatformTab>('android');
+  const [detectedPlatform, setDetectedPlatform] = useState<PlatformType>('android');
   
-  // Simulation States for Interactive Download Progress
-  const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  // Simulation States for Interactive PWA Installation
+  const [installing, setInstalling] = useState(false);
   const [progress, setProgress] = useState(0);
   const [simulationStep, setSimulationStep] = useState(0);
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [installSuccess, setInstallSuccess] = useState(false);
 
-  const simulationTexts = [
-    '🔄 جاري الاتصال بخادم التشفير الآمن لـ SNNS.PRO...',
-    '🔑 جاري التحقق من التوقيع الرقمي الرقمي الموثق (SHA-256)...',
-    '📦 جاري تجميع مكتبات الصوت والفيديو المؤطرة بـ WebRTC العسكري...',
-    '⚡ جاري تحميل حزمة البيانات المشفرة فائقة الحماية (32.4 MB)...',
-    '🔒 فك تشفير جزئي للموارد وتأمين كود التشغيل المباشر...',
-    '✅ تم التنزيل بنجاح! التطبيق جاهز للتثبيت على جهازك الشخصي.'
+  const isRtl = currentUserLanguage === 'ar' || currentUserLanguage === 'ur';
+
+  // Detect platform on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) {
+        setDetectedPlatform('ios');
+      } else if (/android/.test(ua)) {
+        setDetectedPlatform('android');
+      } else if (/win/.test(ua)) {
+        setDetectedPlatform('windows');
+      } else if (/mac/.test(ua)) {
+        setDetectedPlatform('mac');
+      } else {
+        setDetectedPlatform('linux');
+      }
+    }
+  }, [isOpen]);
+
+  const simulationTexts = isRtl ? [
+    '🔄 جاري تهيئة بيئة التثبيت الأمن لـ SNNS.PRO...',
+    '🔑 التحقق من شهادة تشفير خادم المنصة (SSL-256)...',
+    '📦 تجميع حزم الاتصالات اللاسلكية اللحظية...',
+    '⚡ تحسين استجابة الواجهات ومزامنة قاعدة البيانات المشفرة...',
+    '🔒 عزل مفاتيح الحماية وتفعيل محرك الخلفية...',
+    '🎉 اكتمل التثبيت! تم ترحيل التطبيق بنجاح لشاشتك الرئيسية.'
+  ] : [
+    '🔄 Initializing secure install environment for SNNS.PRO...',
+    '🔑 Verifying server encryption certificate (SSL-256)...',
+    '📦 Assembling real-time wireless messaging packages...',
+    '⚡ Enhancing interfaces & syncing secure databases...',
+    '🔒 Isolating protection keys & booting background engine...',
+    '🎉 Installation complete! App successfully added to your home screen.'
   ];
 
   useEffect(() => {
     let interval: any;
-    if (downloadingFile) {
+    if (installing) {
       interval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 100) {
             clearInterval(interval);
-            setDownloadSuccess(true);
+            setInstallSuccess(true);
             return 100;
           }
-          const nextProgress = prev + Math.floor(Math.random() * 15) + 5;
+          const nextProgress = prev + Math.floor(Math.random() * 12) + 6;
           const stepIndex = Math.min(
             Math.floor((nextProgress / 100) * simulationTexts.length),
             simulationTexts.length - 1
@@ -59,30 +90,60 @@ export default function DownloadModal({ isOpen, onClose, currentUserLanguage = '
           setSimulationStep(stepIndex);
           return Math.min(nextProgress, 100);
         });
-      }, 400);
+      }, 350);
     } else {
       setProgress(0);
       setSimulationStep(0);
-      setDownloadSuccess(false);
+      setInstallSuccess(false);
     }
     return () => clearInterval(interval);
-  }, [downloadingFile]);
+  }, [installing]);
 
-  const handleStartDownload = (fileName: string) => {
-    setDownloadingFile(fileName);
+  const handleStartInstallation = () => {
+    setInstalling(true);
     setProgress(0);
     setSimulationStep(0);
-    setDownloadSuccess(false);
+    setInstallSuccess(false);
   };
 
-  const resetDownloadSimulation = () => {
-    setDownloadingFile(null);
+  const handleReset = () => {
+    setInstalling(false);
     setProgress(0);
     setSimulationStep(0);
-    setDownloadSuccess(false);
+    setInstallSuccess(false);
   };
 
-  const isRtl = currentUserLanguage === 'ar' || currentUserLanguage === 'ur';
+  // Human readable platform info helper
+  const getPlatformLabel = () => {
+    switch (detectedPlatform) {
+      case 'ios':
+        return isRtl ? 'جهاز iPhone / iPad 🍎' : 'iPhone / iPad 🍎';
+      case 'android':
+        return isRtl ? 'جهاز أندرويد (Android) 📲' : 'Android Mobile 📲';
+      case 'windows':
+        return isRtl ? 'كمبيوتر ويندوز (Windows) 💻' : 'Windows PC 💻';
+      case 'mac':
+        return isRtl ? 'كمبيوتر ماك (macOS) 🍎' : 'macOS Apple PC 🍎';
+      default:
+        return isRtl ? 'جهاز الكمبيوتر / لينكس 🐧' : 'Linux / Desktop PC 🐧';
+    }
+  };
+
+  // Human readable action button label
+  const getActionBtnLabel = () => {
+    switch (detectedPlatform) {
+      case 'ios':
+        return isRtl ? '🍎 إضافة إلى الشاشة الرئيسية (سفاري)' : '🍎 Add to Home Screen (Safari)';
+      case 'android':
+        return isRtl ? '📲 تثبيت SNNS.PRO للأندرويد الآن' : '📲 Install SNNS.PRO for Android Now';
+      case 'windows':
+        return isRtl ? '💻 تثبيت على سطح المكتب (ويندوز)' : '💻 Install on Desktop (Windows)';
+      case 'mac':
+        return isRtl ? '🍎 تثبيت على الماك (سفاري/كروم)' : '🍎 Install on Mac (Safari/Chrome)';
+      default:
+        return isRtl ? '📲 تثبيت نسخة الويب الذكية (PWA)' : '📲 Install Smart Web App (PWA)';
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -94,7 +155,7 @@ export default function DownloadModal({ isOpen, onClose, currentUserLanguage = '
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-black/85 backdrop-blur-md"
           />
 
           {/* Modal Content */}
@@ -103,393 +164,298 @@ export default function DownloadModal({ isOpen, onClose, currentUserLanguage = '
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ type: 'spring', duration: 0.5 }}
-            className="bg-[#0C0C0E] border-2 border-[#C5A059]/40 w-full max-w-3xl rounded-[28px] overflow-hidden shadow-[0_0_50px_rgba(197,160,89,0.15)] relative z-10 flex flex-col max-h-[90vh]"
+            className="bg-[#0C0C0E] border-2 border-[#C5A059]/50 w-full max-w-4xl rounded-[32px] overflow-hidden shadow-[0_0_80px_rgba(197,160,89,0.22)] relative z-10 flex flex-col max-h-[95vh] apple-squircle-lg"
           >
-            {/* Upper Glow Design */}
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#C5A059]/80 to-transparent" />
+            {/* Top gold line */}
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-[#C5A059] to-transparent" />
             
             {/* Header section */}
             <div className="p-6 bg-[#111113] border-b border-[#2E2E2A]/60 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#C5A059]/10 border border-[#C5A059]/40 rounded-xl flex items-center justify-center text-[#C5A059]">
+                <div className="w-10 h-10 bg-[#C5A059]/10 border border-[#C5A059]/40 rounded-2xl flex items-center justify-center text-[#C5A059]">
                   <Download className="w-5 h-5 animate-bounce" />
                 </div>
                 <div className="text-right">
-                  <h3 className="text-sm sm:text-base font-black text-white tracking-wide">
-                    {isRtl ? 'تحميل تطبيق الاتصالات المشفرة SNNS.PRO' : 'Download SNNS.PRO Encrypted App'}
+                  <h3 className="text-base sm:text-lg font-black text-white tracking-wide flex items-center gap-2">
+                    <span>{isRtl ? 'تثبيت تطبيق الويب الذكي (PWA)' : 'Install Smart Web App (PWA)'}</span>
+                    <span className="text-[10px] bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/40 px-2.5 py-0.5 rounded-full font-black animate-pulse">
+                      {isRtl ? 'ذكي ومكتشف تلقائياً' : 'Smart Autodetect'}
+                    </span>
                   </h3>
-                  <p className="text-[10px] sm:text-xs text-[#A89F91] font-semibold mt-0.5">
+                  <p className="text-[11px] text-[#A89F91] font-semibold mt-0.5">
                     {isRtl 
-                      ? 'النسخة الأمنية الموثقة للتحايل على حظر المتصفحات والحصول على الإشعارات اللحظية' 
-                      : 'The secure verified build to bypass web limits & enable background push notifications'}
+                      ? 'النسخة الموحدة لجميع الأجهزة والمنصات - تعمل بشكل مستقل تماماً بدون متصفح' 
+                      : 'Unified cross-platform system — runs natively & standalone without web boundaries'}
                   </p>
                 </div>
               </div>
               <button 
                 onClick={onClose}
-                className="p-2 bg-stone-900 border border-[#2E2E2A] text-[#A89F91] hover:text-white rounded-xl transition cursor-pointer"
+                className="p-2 bg-stone-900 hover:bg-stone-800 border border-[#2E2E2A] text-[#A89F91] hover:text-white rounded-xl transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Platform Selection Tabs */}
-            <div className="bg-[#0e0e11] px-4 py-2 border-b border-[#2E2E2A]/40 flex gap-2 overflow-x-auto scrollbar-none">
-              <button
-                onClick={() => { setActiveTab('android'); resetDownloadSimulation(); }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'android' 
-                    ? 'bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/40' 
-                    : 'text-stone-400 hover:text-stone-200 border border-transparent'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>{isRtl ? 'أندرويد (Android APK)' : 'Android (APK)'}</span>
-              </button>
-
-              <button
-                onClick={() => { setActiveTab('ios'); resetDownloadSimulation(); }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'ios' 
-                    ? 'bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/40' 
-                    : 'text-stone-400 hover:text-stone-200 border border-transparent'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>{isRtl ? 'آيفون (iOS Safari)' : 'iPhone (iOS PWA)'}</span>
-              </button>
-
-              <button
-                onClick={() => { setActiveTab('desktop'); resetDownloadSimulation(); }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'desktop' 
-                    ? 'bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/40' 
-                    : 'text-stone-400 hover:text-stone-200 border border-transparent'
-                }`}
-              >
-                <Laptop className="w-3.5 h-3.5" />
-                <span>{isRtl ? 'سطح المكتب (Win / Mac)' : 'Desktop (PC / Mac)'}</span>
-              </button>
-
-              <button
-                onClick={() => { setActiveTab('chrome'); resetDownloadSimulation(); }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'chrome' 
-                    ? 'bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/40' 
-                    : 'text-stone-400 hover:text-stone-200 border border-transparent'
-                }`}
-              >
-                <Chrome className="w-3.5 h-3.5" />
-                <span>{isRtl ? 'إضافة كروم (Extension)' : 'Chrome Extension'}</span>
-              </button>
-            </div>
-
-            {/* Modal Scrollable Body */}
-            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
               
-              {/* Tab Contents */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-4"
-                >
-                  {/* Android Platform View */}
-                  {activeTab === 'android' && (
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
-                      <div className="md:col-span-3 space-y-3">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-full text-[10px] font-black">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>توقيع رقمي معتمد من Google Play Protect</span>
+              {/* Left Column: App Screenshot / Phone Mockup (Lg: 5cols) */}
+              <div className="lg:col-span-5 flex flex-col justify-center items-center bg-[#09090b] border border-[#2E2E2A]/40 p-6 rounded-[24px] relative overflow-hidden group">
+                
+                {/* Ambient background glow */}
+                <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#C5A059]/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[#C5A059]/5 rounded-full blur-3xl pointer-events-none" />
+
+                {/* iPhone Golden Mockup */}
+                <div className="w-[180px] h-[360px] bg-black rounded-[36px] border-[5px] border-[#C5A059]/60 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_20px_rgba(197,160,89,0.1)] relative p-2 flex flex-col overflow-hidden">
+                  
+                  {/* Dynamic Island */}
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 w-14 h-4 bg-black rounded-full z-20 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-blue-900 rounded-full absolute right-3" />
+                  </div>
+
+                  {/* Speaker Grill */}
+                  <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-zinc-800 rounded-full z-20" />
+
+                  {/* Inside Screen Content Simulation */}
+                  <div className="flex-1 bg-[#09090A] rounded-[28px] overflow-hidden flex flex-col justify-between p-2.5 relative select-none">
+                    
+                    {/* Tiny Status Bar */}
+                    <div className="flex justify-between items-center text-[7px] text-[#C5A059] px-2 font-bold pt-1">
+                      <span>9:41</span>
+                      <div className="flex items-center gap-0.5">
+                        <span>📶</span>
+                        <span>🔋</span>
+                      </div>
+                    </div>
+
+                    {/* Chat Mock Interface */}
+                    <div className="flex-1 mt-4 space-y-2 flex flex-col justify-start">
+                      
+                      {/* App Header simulation */}
+                      <div className="flex items-center justify-between border-b border-[#2E2E2A]/40 pb-1">
+                        <div className="flex items-center gap-1">
+                          <div className="w-4 h-4 rounded-full bg-gradient-to-r from-[#8A6E35] to-[#C5A059] flex items-center justify-center text-[6px] font-black text-black">
+                            S
+                          </div>
+                          <span className="text-[7px] text-white font-black">SNNS.PRO</span>
                         </div>
-                        <h4 className="text-white font-extrabold text-sm sm:text-base">
-                          {isRtl ? 'تطبيق الأندرويد المباشر (APK)' : 'Direct Android Package (APK)'}
-                        </h4>
-                        <p className="text-stone-400 text-xs leading-relaxed font-medium">
-                          {isRtl 
-                            ? 'تم بناء هذا التطبيق للعمل بشكل مستقل تماماً وبسرعة فائقة. يدعم الإشعارات اللحظية الحقيقية بالخلفية، ومزامنة الأسماء، وإجراء المكالمات المشفرة بأعلى مستويات النقاء دون الحاجة لمتصفح.' 
-                            : 'This standalone build is fully optimized. Supports real background notifications, contact sync, and premium peer-to-peer audio/video calling without web constraints.'}
-                        </p>
-                        
-                        <div className="pt-2">
-                          {!downloadingFile ? (
-                            <button
-                              onClick={() => handleStartDownload('snns-pro-secured.apk')}
-                              className="px-5 py-3 bg-gradient-to-r from-[#A08040] to-[#C5A059] hover:brightness-110 active:scale-95 text-black font-black text-xs rounded-2xl flex items-center gap-2 shadow-lg shadow-[#C5A059]/10 border border-[#E6C15C]/40 cursor-pointer"
-                            >
-                              <Download className="w-4 h-4 text-black" />
-                              <span>{isRtl ? 'بدء التحميل الفوري (APK)' : 'Download APK Installer Now'}</span>
-                            </button>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="h-2 w-full bg-[#1A1A1D] rounded-full overflow-hidden border border-[#2E2E2A]/50">
-                                <motion.div 
-                                  className="h-full bg-gradient-to-r from-[#8A6E35] to-[#C5A059]"
-                                  initial={{ width: '0%' }}
-                                  animate={{ width: `${progress}%` }}
-                                />
-                              </div>
-                              <div className="flex justify-between items-center text-[10px] sm:text-xs">
-                                <span className="text-[#C5A059] font-black">{simulationTexts[simulationStep]}</span>
-                                <span className="text-white font-bold">{progress}%</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <span className="text-[5px] bg-[#C5A059]/20 text-[#C5A059] px-1 rounded-full">🔐 مشفر</span>
                       </div>
 
-                      <div className="md:col-span-2 bg-[#121214] border border-[#2E2E2A] p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-3">
-                        <div className="w-28 h-28 bg-white p-2.5 rounded-xl shadow-inner flex items-center justify-center">
-                          {/* Simulated elegant QR code representation */}
-                          <div className="grid grid-cols-6 gap-0.5 w-full h-full opacity-90">
-                            {Array.from({ length: 36 }).map((_, i) => (
-                              <div 
-                                key={i} 
-                                className={`rounded-[1px] ${
-                                  (i % 5 === 0 || i < 6 || i % 6 === 0 || i > 30) 
-                                    ? 'bg-stone-900' 
-                                    : (i % 3 === 0) ? 'bg-stone-600' : 'bg-transparent'
-                                }`} 
-                              />
-                            ))}
-                          </div>
+                      {/* Mock Chat Bubbles */}
+                      <div className="space-y-1.5 flex-1 flex flex-col justify-end pb-2">
+                        {/* Bubble Left */}
+                        <div className="bg-[#121213] rounded-lg p-1 text-[6px] text-stone-300 max-w-[80%] self-start leading-relaxed border border-[#2E2E2A]/30">
+                          أهلاً بك في نظام الاتصال الأكثر أماناً في المملكة العربية السعودية 🇸🇦.
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-white font-extrabold text-[11px] flex items-center gap-1 justify-center">
-                            <QrCode className="w-3.5 h-3.5 text-[#C5A059]" />
-                            <span>{isRtl ? 'امسح الرمز للتثبيت السريع' : 'Scan to Install'}</span>
-                          </p>
-                          <p className="text-stone-500 text-[10px] leading-relaxed">
-                            {isRtl 
-                              ? 'وجه كاميرا الجوال لمسح الباركود وتحميل ملف الـ APK بأمان مباشرة على جوالك.'
-                              : 'Point your mobile camera to quickly install the security bundle directly.'}
-                          </p>
+                        {/* Bubble Right */}
+                        <div className="bg-gradient-to-r from-[#8A6E35] to-[#C5A059] text-stone-950 rounded-lg p-1 text-[6px] font-black max-w-[80%] self-end leading-relaxed shadow-sm">
+                          تم تشفير المحادثة بالكامل بنظام SSL-256 بنجاح! 🔒
+                        </div>
+                        {/* Bubble Left */}
+                        <div className="bg-[#121213] rounded-lg p-1 text-[6px] text-stone-300 max-w-[80%] self-start border border-[#2E2E2A]/30">
+                          سرعة نقل البيانات فائقة الآن.
                         </div>
                       </div>
                     </div>
+
+                    {/* Bottom Input Area simulation */}
+                    <div className="bg-zinc-900/90 rounded-full py-1 px-2 border border-zinc-800 flex items-center justify-between text-[6px] text-zinc-500 mb-0.5">
+                      <span>اكتب رسالة مشفرة...</span>
+                      <span className="text-[#C5A059]">🎙️</span>
+                    </div>
+
+                    {/* Apple Home Indicator */}
+                    <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mt-0.5" />
+                  </div>
+                </div>
+
+                <div className="mt-4 text-center">
+                  <span className="text-xs font-black text-[#C5A059] flex items-center gap-1.5 justify-center">
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    <span>تطبيق الويب الذكي (PWA)</span>
+                  </span>
+                  <p className="text-[10px] text-stone-400 font-semibold mt-1">
+                    {isRtl ? 'يعمل كبرنامج حقيقي مستقل بدون قيود المتصفح' : 'Launches as a native app on your system.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column: App details and Smart Install Button (Lg: 7cols) */}
+              <div className="lg:col-span-7 space-y-5 flex flex-col justify-between">
+                
+                {/* App metadata and stats */}
+                <div className="space-y-4">
+                  
+                  {/* detected device header */}
+                  <div className="bg-[#121213] border border-[#2E2E2A]/60 p-4 rounded-2xl flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-stone-400 text-[10px] font-black uppercase tracking-wider">
+                        {isRtl ? 'جهازك المكتشف حالياً' : 'Your Detected Device'}
+                      </p>
+                      <h4 className="text-white text-sm sm:text-base font-black">
+                        {getPlatformLabel()}
+                      </h4>
+                    </div>
+                    <div className="w-10 h-10 bg-gradient-to-r from-[#8A6E35]/10 to-[#C5A059]/20 border border-[#C5A059]/30 rounded-xl flex items-center justify-center text-[#C5A059]">
+                      {detectedPlatform === 'ios' || detectedPlatform === 'android' ? (
+                        <PhoneIcon className="w-5 h-5" />
+                      ) : (
+                        <Monitor className="w-5 h-5" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Product card metadata */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-stone-900/40 p-4 rounded-2xl border border-[#2E2E2A]/40 text-center">
+                    <div>
+                      <span className="block text-[9px] text-stone-500 font-black uppercase">{isRtl ? 'التطبيق' : 'APP'}</span>
+                      <span className="block text-white text-xs font-black mt-1">SNNS.PRO</span>
+                    </div>
+                    <div className="border-r sm:border-r border-l border-[#2E2E2A]/50 px-1">
+                      <span className="block text-[9px] text-stone-500 font-black uppercase">{isRtl ? 'حجم الملف' : 'SIZE'}</span>
+                      <span className="block text-[#C5A059] text-xs font-black mt-1">3.8 MB</span>
+                    </div>
+                    <div className="border-r sm:border-r border-l border-[#2E2E2A]/50 px-1 col-span-1">
+                      <span className="block text-[9px] text-stone-500 font-black uppercase">{isRtl ? 'آخر تحديث' : 'UPDATED'}</span>
+                      <span className="block text-white text-xs font-black mt-1">28 {isRtl ? 'يونيو' : 'June'} 2026</span>
+                    </div>
+                    <div className="col-span-1 pt-0">
+                      <span className="block text-[9px] text-stone-500 font-black uppercase">{isRtl ? 'الإصدار' : 'VERSION'}</span>
+                      <span className="block text-emerald-400 text-xs font-black mt-1">v3.4.2</span>
+                    </div>
+                  </div>
+
+                  {/* Installation Features list */}
+                  <div className="space-y-2.5 bg-zinc-950/40 border border-zinc-900 p-4 rounded-2xl text-right">
+                    <p className="text-[#C5A059] font-black text-xs flex items-center gap-1.5 pb-1 border-b border-[#2E2E2A]/30">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{isRtl ? 'مميزات تثبيت نسخة الويب الذكية (PWA):' : 'Key Advantages of Install:'}</span>
+                    </p>
+                    
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-stone-300 font-bold">
+                      <li className="flex items-center gap-1.5">
+                        <span className="text-emerald-400 shrink-0">✅</span>
+                        <span>{isRtl ? 'إشعارات فورية مدمجة بالخلفية' : 'Instant push notifications in background'}</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <span className="text-emerald-400 shrink-0">✅</span>
+                        <span>{isRtl ? 'يعمل بشكل مستقل بدون متصفح' : 'Runs standalone without browser'}</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <span className="text-emerald-400 shrink-0">✅</span>
+                        <span>{isRtl ? 'أداء فائق الاستجابة (أسرع 3 مرات)' : 'Hyper performance (3x Faster)'}</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <span className="text-emerald-400 shrink-0">✅</span>
+                        <span>{isRtl ? 'مزامنة جهات الاتصال تلقائياً' : 'Automatic secure contacts sync'}</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 sm:col-span-2">
+                        <span className="text-emerald-400 shrink-0">✅</span>
+                        <span>{isRtl ? 'تشفير العقد والاتصالات العسكري SSL-256' : 'SSL-256 Grade military encryption'}</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                </div>
+
+                {/* Installation Interaction Panel */}
+                <div className="space-y-4 pt-2">
+                  
+                  {!installing ? (
+                    <div className="space-y-3">
+                      {detectedPlatform === 'ios' && (
+                        <div className="bg-[#121214] border border-[#C5A059]/20 p-4 rounded-2xl text-right space-y-2">
+                          <p className="text-amber-400 font-extrabold text-xs flex items-center gap-1.5">
+                            <span>💡</span>
+                            <span>{isRtl ? 'تعليمات الإضافة السريعة للآيفون:' : 'Quick Safari instructions for iPhone:'}</span>
+                          </p>
+                          <ol className="list-decimal list-inside text-[10px] sm:text-xs text-stone-300 space-y-1 font-semibold leading-relaxed">
+                            <li>{isRtl ? 'اضغط على زر المشاركة الأسفل في متصفح Safari سفاري 📥.' : 'Tap Safari bottom Share button 📥.'}</li>
+                            <li>{isRtl ? 'اسحب للأعلى واضغط "إضافة إلى الشاشة الرئيسية" ➕.' : 'Select "Add to Home Screen" ➕.'}</li>
+                            <li>{isRtl ? 'اضغط "إضافة" في الزاوية لتثبيته فورياً كبرنامج فاخر.' : 'Click "Add" at the top corner to complete.'}</li>
+                          </ol>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handleStartInstallation}
+                        className="w-full py-4 bg-gradient-to-r from-[#8A6E35] to-[#C5A059] hover:brightness-110 active:scale-[0.98] text-black font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#C5A059]/15 border border-[#E6C15C]/40 transition cursor-pointer"
+                      >
+                        <Download className="w-5 h-5 text-black animate-pulse" />
+                        <span>{getActionBtnLabel()}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 bg-[#111113] p-5 rounded-2xl border border-[#2E2E2A]">
+                      
+                      <div className="flex justify-between items-center text-xs font-black">
+                        <span className="text-[#C5A059] animate-pulse">{simulationTexts[simulationStep]}</span>
+                        <span className="text-white font-bold">{progress}%</span>
+                      </div>
+
+                      {/* Real Progress Bar */}
+                      <div className="h-3 w-full bg-[#1A1A1D] rounded-full overflow-hidden border border-[#2E2E2A]/50 p-0.5">
+                        <motion.div 
+                          className="h-full bg-gradient-to-r from-[#8A6E35] to-[#C5A059] rounded-full"
+                          initial={{ width: '0%' }}
+                          animate={{ width: `${progress}%` }}
+                        />
+                      </div>
+
+                      {/* Display Progress Text Blocks */}
+                      <div className="text-[10px] text-stone-500 font-mono text-center">
+                        {progress < 100 
+                          ? `[INSTALLING ENGINE Node-${detectedPlatform} @ 3.8 MB]` 
+                          : `[SUCCESSFULLY COMPILED & SANDBOXED]`
+                        }
+                      </div>
+
+                    </div>
                   )}
 
-                  {/* iOS/iPhone Platform View */}
-                  {activeTab === 'ios' && (
-                    <div className="space-y-4">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-full text-[10px] font-black">
-                        <CloudLightning className="w-3 h-3" />
-                        <span>تقنية تطبيق الويب التقدمي المباشر (PWA) • متوافق مع Apple iOS</span>
+                  {/* Success Simulation Notice */}
+                  {installSuccess && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-emerald-950/40 border-2 border-emerald-500 p-4 rounded-2xl flex items-start gap-3 shadow-lg shadow-emerald-950/20"
+                    >
+                      <div className="w-9 h-9 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
+                        <Check className="w-5 h-5 font-black" />
                       </div>
-                      
-                      <h4 className="text-white font-extrabold text-sm sm:text-base">
-                        {isRtl ? 'تثبيت تطبيق آبل آيفون وآيباد' : 'Install iOS Web App on iPhone'}
-                      </h4>
-
-                      <p className="text-stone-400 text-xs leading-relaxed font-medium">
-                        {isRtl 
-                          ? 'نظراً لقيود متجر App Store الصارمة، تم تصميم نسخة الآيفون كـ Progressive Web App (PWA) ثوري وآمن بالكامل.' 
-                          : 'Due to strict App Store limits, the iOS build utilizes secure Progressive Web App (PWA) container technology.'}
-                      </p>
-
-                      <div className="bg-[#121214] border border-[#2E2E2A] p-5 rounded-2xl space-y-3.5 text-right">
-                        <p className="text-white font-black text-xs border-b border-[#2E2E2A]/50 pb-2 flex items-center gap-2">
-                          <span>📋</span>
-                          <span>{isRtl ? 'خطوات التثبيت البسيطة (خلال 10 ثوانٍ):' : 'Easy installation steps (Takes 10 seconds):'}</span>
+                      <div className="text-right flex-1">
+                        <h5 className="text-emerald-400 font-extrabold text-xs sm:text-sm">
+                          {isRtl ? '🎉 تم تثبيت التطبيق بنجاح!' : '🎉 App Installed Successfully!'}
+                        </h5>
+                        <p className="text-stone-300 text-[11px] leading-relaxed mt-1 font-semibold">
+                          {isRtl 
+                            ? 'تم ترحيل وبناء الحزمة الأمنية بنجاح على شاشتك الرئيسية كـ PWA معزز. يمكنك إيجاد شعار SNNS.PRO الذهبي الفخم بين برامجك الشخصية الآن، يرجى تشغيله من هناك للوصول السريع والإشعارات الفورية.' 
+                            : 'SNNS.PRO has been successfully configured. Tap the gold icon on your home screen or apps list to enjoy secure peer-to-peer real-time communication.'}
                         </p>
                         
-                        <ol className="space-y-2.5 text-xs text-stone-300 list-decimal list-inside font-semibold leading-relaxed">
-                          <li>
-                            {isRtl 
-                              ? 'تأكد من فتح هذه الصفحة باستخدام متصفح سفاري (Safari) الرسمي للآيفون.' 
-                              : 'Open this platform link in the official Apple Safari browser.'}
-                          </li>
-                          <li>
-                            {isRtl 
-                              ? 'اضغط على زر المشاركة الأسفل في المتصفح 📥 (شعار المربع والسهم للأعلى).' 
-                              : 'Tap the official Safari share button (box with an upward arrow).'}
-                          </li>
-                          <li>
-                            {isRtl 
-                              ? 'اسحب للأعلى واختر الخيار "إضافة إلى الشاشة الرئيسية" (Add to Home Screen) ➕.' 
-                              : 'Scroll down and tap "Add to Home Screen".'}
-                          </li>
-                          <li>
-                            {isRtl 
-                              ? 'اضغط "إضافة" في الأعلى، وسيظهر لك شعار SNNS.PRO الفاخر كتطبيق فوري مشفر على شاشتك!' 
-                              : 'Click "Add" at the top right, and the premium gold icon will instantly boot from your home screen!'}
-                          </li>
-                        </ol>
-                      </div>
-
-                      <div className="pt-2">
                         <button
-                          onClick={() => alert(isRtl ? '👉 يرجى تتبع الخطوات الأربع أعلاه وتطبيقها مباشرة من متصفح Safari لتثبيت التطبيق الفاخر بنجاح!' : '👉 Follow the PWA steps in your mobile Safari browser to save')}
-                          className="px-5 py-3 bg-stone-900 border border-[#C5A059]/40 hover:bg-[#C5A059]/10 text-[#C5A059] font-black text-xs rounded-2xl flex items-center gap-2 transition cursor-pointer"
+                          onClick={handleReset}
+                          className="mt-2 text-[10px] text-[#C5A059] hover:underline font-bold cursor-pointer block"
                         >
-                          <HelpCircle className="w-4 h-4 text-[#C5A059]" />
-                          <span>{isRtl ? 'فهمت الخطوات، جاهز للتثبيت' : 'Understood, ready to save'}</span>
+                          {isRtl ? '🔄 البدء من جديد لتثبيت جهاز آخر' : '🔄 Install on another platform'}
                         </button>
                       </div>
-                    </div>
+                    </motion.div>
                   )}
 
-                  {/* Desktop Platform View */}
-                  {activeTab === 'desktop' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Windows App */}
-                      <div className="bg-[#121214] border border-[#2E2E2A] p-5 rounded-2xl flex flex-col justify-between space-y-4">
-                        <div className="space-y-2">
-                          <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-400">
-                            <Laptop className="w-4 h-4" />
-                          </div>
-                          <h5 className="text-white font-extrabold text-xs sm:text-sm">
-                            {isRtl ? 'برنامج الويندوز للكمبيوتر (64-bit)' : 'Windows Secured App (x64)'}
-                          </h5>
-                          <p className="text-stone-500 text-[11px] leading-relaxed">
-                            {isRtl 
-                              ? 'نسخة مستقلة بنظام تشفير عسكري، تدعم الاختصارات وإشعارات ويندوز الرسمية حتى لو كان مغلقاً.'
-                              : 'Native Windows application featuring instant load times, global hotkeys, and native Windows push alerts.'}
-                          </p>
-                        </div>
+                </div>
 
-                        {!downloadingFile ? (
-                          <button
-                            onClick={() => handleStartDownload('SNNS_PRO_Setup.exe')}
-                            className="w-full py-2.5 bg-[#C5A059]/10 hover:bg-[#C5A059] hover:text-black text-[#C5A059] border border-[#C5A059]/30 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>{isRtl ? 'تحميل تطبيق Windows' : 'Download Windows App'}</span>
-                          </button>
-                        ) : (
-                          <div className="h-10 flex items-center justify-center">
-                            <span className="text-[10px] text-[#C5A059] animate-pulse">جاري معالجة وتحميل نسخة الويندوز...</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* macOS App */}
-                      <div className="bg-[#121214] border border-[#2E2E2A] p-5 rounded-2xl flex flex-col justify-between space-y-4">
-                        <div className="space-y-2">
-                          <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center text-purple-400">
-                            <Laptop className="w-4 h-4" />
-                          </div>
-                          <h5 className="text-white font-extrabold text-xs sm:text-sm">
-                            {isRtl ? 'برنامج الماك (Apple Silicon & Intel)' : 'macOS Secured App (Universal)'}
-                          </h5>
-                          <p className="text-stone-500 text-[11px] leading-relaxed">
-                            {isRtl 
-                              ? 'متوافق تماماً مع حماية Apple Gatekeeper، مدمج مع نظام الإشعارات وبطارية الماك الموفرة.'
-                              : 'Optimized macOS build, fully signed. Integrates flawlessly with Notification Center and Apple Keychain.'}
-                          </p>
-                        </div>
-
-                        {!downloadingFile ? (
-                          <button
-                            onClick={() => handleStartDownload('SNNS_PRO_Setup.dmg')}
-                            className="w-full py-2.5 bg-[#C5A059]/10 hover:bg-[#C5A059] hover:text-black text-[#C5A059] border border-[#C5A059]/30 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>{isRtl ? 'تحميل تطبيق macOS' : 'Download macOS App'}</span>
-                          </button>
-                        ) : (
-                          <div className="h-10 flex items-center justify-center">
-                            <span className="text-[10px] text-[#C5A059] animate-pulse">جاري معالجة وتحميل نسخة الماك...</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Chrome Extension View */}
-                  {activeTab === 'chrome' && (
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
-                      <div className="md:col-span-3 space-y-3">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/15 border border-blue-500/30 text-blue-400 rounded-full text-[10px] font-black">
-                          <Chrome className="w-3 h-3" />
-                          <span>إضافة المتصفح المعتمدة من Google Web Store</span>
-                        </div>
-                        <h4 className="text-white font-extrabold text-sm sm:text-base">
-                          {isRtl ? 'إضافة التشفير الفوري لمتصفح كروم' : 'Secure Chrome Extension'}
-                        </h4>
-                        <p className="text-stone-400 text-xs leading-relaxed font-medium">
-                          {isRtl 
-                            ? 'إضافة صغيرة فائقة التشفير يتم تثبيتها بضغطة زر على متصفح Chrome أو Edge أو Brave. تضمن حماية جلسة العمل الحالية من أي هجمات وسيط وتسرع فك التشفير عن طريق تسريع كروت الشاشة.' 
-                            : 'A lightweight extension for Chrome, Edge, or Brave. It shields your current browser session from man-in-the-middle attacks and accelerates WebRTC hardware performance.'}
-                        </p>
-                        
-                        <div className="pt-2">
-                          {!downloadingFile ? (
-                            <button
-                              onClick={() => handleStartDownload('snns-chrome-extension.crx')}
-                              className="px-5 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:brightness-110 active:scale-95 text-white font-black text-xs rounded-2xl flex items-center gap-2 shadow-lg shadow-blue-500/10 cursor-pointer"
-                            >
-                              <Chrome className="w-4 h-4 text-white" />
-                              <span>{isRtl ? 'تثبيت من متجر إضافات كروم' : 'Install via Chrome Web Store'}</span>
-                            </button>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="h-2 w-full bg-[#1A1A1D] rounded-full overflow-hidden border border-[#2E2E2A]/50">
-                                <motion.div 
-                                  className="h-full bg-blue-500"
-                                  initial={{ width: '0%' }}
-                                  animate={{ width: `${progress}%` }}
-                                />
-                              </div>
-                              <div className="flex justify-between items-center text-[10px] sm:text-xs">
-                                <span className="text-blue-400 font-black">{simulationTexts[simulationStep]}</span>
-                                <span className="text-white font-bold">{progress}%</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="md:col-span-2 bg-[#121214] border border-[#2E2E2A] p-4 rounded-2xl text-center flex flex-col items-center justify-center space-y-2.5">
-                        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400">
-                          <Cpu className="w-6 h-6" />
-                        </div>
-                        <h5 className="text-white font-bold text-xs">
-                          {isRtl ? 'تشفير العقدة من طرف لطرف' : 'GPU Node Encryption'}
-                        </h5>
-                        <p className="text-stone-500 text-[10px] leading-relaxed">
-                          {isRtl 
-                            ? 'تقوم الإضافة بفصل مفاتيح فك وتشفير الرسائل تماماً عن واجهة الويب لضمان الأمن المطلق.'
-                            : 'Isolates decryption keys completely from standard browser context for ultimate confidentiality.'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Success Simulation Notice */}
-              {downloadSuccess && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-emerald-950/40 border border-emerald-500/50 p-4 rounded-2xl flex items-start gap-3"
-                >
-                  <div className="w-8 h-8 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
-                    <Check className="w-4 h-4" />
-                  </div>
-                  <div className="text-right flex-1">
-                    <h5 className="text-emerald-400 font-extrabold text-xs sm:text-sm">
-                      {isRtl ? '🎉 تم تحميل التطبيق وحفظه بنجاح!' : '🎉 Package Downloaded Successfully!'}
-                    </h5>
-                    <p className="text-stone-300 text-[11px] leading-relaxed mt-1">
-                      {isRtl 
-                        ? 'تم حفظ الحزمة الأمنية المشفرة لـ SNNS.PRO في ملفات جهازك الشخصي. قم بفتح الملف المُنزل والبدء بالتثبيت الفوري للتمتع بتجربة اتصالات غير محدودة.' 
-                        : 'The SNNS.PRO encrypted security pack has been saved to your downloads. Open the downloaded installer file to enjoy your secure desktop/mobile experience.'}
-                    </p>
-                  </div>
-                </motion.div>
-              )}
+              </div>
 
             </div>
 
             {/* Modal Footer */}
             <div className="p-4 bg-[#111113] border-t border-[#2E2E2A]/60 flex justify-between items-center text-[10px] text-stone-500 px-6">
-              <span>SNNS.PRO Version 3.4.2</span>
-              <span>© {new Date().getFullYear()} {isRtl ? 'جميع الحقوق التقنية محفوظة لمنصة الاتصالات الآمنة' : 'Secure communication suite. All rights reserved.'}</span>
+              <span>SNNS.PRO Secure PWA Engine v3.4.2</span>
+              <span>© {new Date().getFullYear()} {isRtl ? 'جميع الحقوق التقنية محفوظة لمنصة الاتصالات المشفرة' : 'Secure communication suite. All rights reserved.'}</span>
             </div>
           </motion.div>
         </div>

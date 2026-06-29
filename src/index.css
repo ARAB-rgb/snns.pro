@@ -1,1 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Cairo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  html, body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.011em;
+  }
+
+  /* Universal transition for Lucide SVG icons to make them feel silky smooth */
+  svg {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease, fill 0.2s ease;
+  }
+
+  /* Soft hover state for Apple-styled icons */
+  button:hover svg {
+    transform: scale(1.08);
+  }
+
+  /* Apple-style smooth scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 99px;
+  }
+}
+
+/* Apple Squircle-like smooth rounding utilities */
+.apple-squircle {
+  border-radius: 20px;
+}
+
+.apple-squircle-lg {
+  border-radius: 28px;
+}
+
+.apple-squircle-sm {
+  border-radius: 12px;
+}
+
+/* Premium Apple Glassmorphism and lighting overlays */
+.apple-glass {
+  background: rgba(18, 18, 20, 0.7);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.apple-glass-gold {
+  background: rgba(14, 13, 11, 0.75);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid rgba(197, 160, 89, 0.12);
+}
+
+/* Soft Icon Background Containers */
+.apple-icon-gold {
+  background: rgba(197, 160, 89, 0.08);
+  border: 1px solid rgba(197, 160, 89, 0.18);
+  color: #C5A059;
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.apple-icon-gold:hover {
+  background: rgba(197, 160, 89, 0.14);
+  border-color: rgba(197, 160, 89, 0.3);
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.1);
+}
+
+.apple-icon-gray {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #A89F91;
+  border-radius: 14px;
+}
+
+.apple-icon-gray:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+}
+
+/* Smooth active button highlight */
+.apple-active-tab {
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.15) 0%, rgba(138, 110, 53, 0.05) 100%);
+  border: 1.5px solid rgba(197, 160, 89, 0.35);
+  color: #FFFFFF;
+}
+
+/* Rounded inputs like iOS Search bar */
+.apple-search-bar {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-search-bar:focus-within {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(197, 160, 89, 0.4);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.08);
+}
+
+

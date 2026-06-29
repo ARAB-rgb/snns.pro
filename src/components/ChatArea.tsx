@@ -698,10 +698,10 @@ export default function ChatArea({
         </div>
 
         {/* Action icons like Teams and Imo for Video calls */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => onStartCall(activeContact, 'video')}
-            className="p-2.5 hover:bg-[#C5A059]/20 text-[#C5A059] hover:text-[#E6C15C] rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2.5 hover:bg-[#C5A059]/20 text-[#C5A059] hover:text-[#E6C15C] rounded-full border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all duration-300 shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
             title="اتصال مرئي تيمز / إيمو"
           >
             <Video className="w-4 h-4 text-[#C5A059]" />
@@ -709,16 +709,16 @@ export default function ChatArea({
           </button>
           <button
             onClick={() => onStartCall(activeContact, 'audio')}
-            className="p-2.5 hover:bg-[#C5A059]/20 text-[#C5A059]/90 hover:text-[#E6C15C] rounded-xl border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2.5 hover:bg-[#C5A059]/20 text-[#C5A059]/90 hover:text-[#E6C15C] rounded-full border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all duration-300 shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
             title="اتصال صوتي واتساب"
           >
-            <Phone className="w-4 h-4 text-[#556B2F]/90" />
-            <span className="text-xs font-bold hidden sm:inline text-[#556B2F]/90">صوتية</span>
+            <Phone className="w-4 h-4 text-[#C5A059]" />
+            <span className="text-xs font-black hidden sm:inline text-[#C5A059]">صوتية</span>
           </button>
           <div className="relative">
             <button 
               onClick={() => setShowWallpaperMenu(!showWallpaperMenu)}
-              className="p-2.5 hover:bg-[#1C1C1A] rounded-xl text-stone-300 transition-colors flex items-center gap-1 border border-[#2E2E2A]/70 bg-[#121211] shadow-md cursor-pointer"
+              className="px-4 py-2.5 hover:bg-[#1C1C1A] rounded-full text-stone-300 transition-all duration-300 flex items-center gap-1.5 border border-[#2E2E2A]/70 bg-[#121211] shadow-md cursor-pointer active:scale-95"
               title="تغيير خلفية الدردشة"
             >
               🎨 <span className="text-xs font-black hidden md:inline text-stone-300">الخلفيات</span>
@@ -750,10 +750,10 @@ export default function ChatArea({
           {/* Submit Complaint Button */}
           <button
             onClick={() => setShowComplaintModal(true)}
-            className="p-2.5 hover:bg-rose-50 rounded-xl text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-1 border border-rose-200 bg-rose-50/30 shadow-sm cursor-pointer animate-pulse"
+            className="px-4 py-2.5 hover:bg-rose-900/30 rounded-full text-rose-500 hover:text-rose-400 transition-all duration-300 flex items-center gap-1.5 border border-rose-900/40 bg-rose-950/10 shadow-sm cursor-pointer animate-pulse active:scale-95"
             title="تقديم شكوى أو بلاغ عن محتوى مسيء"
           >
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
+            <AlertTriangle className="w-4 h-4 text-rose-500" />
             <span className="text-xs font-bold hidden md:inline">تقديم بلاغ 🛡️</span>
           </button>
         </div>
@@ -1105,7 +1105,7 @@ export default function ChatArea({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 bg-[#0B0B0A] p-2 rounded-xl">
+          <div className="flex items-center gap-2 bg-[#0B0B0A]/95 p-2 rounded-[24px] border border-[#2E2E2A]/40 shadow-xl">
             
             {/* Attach Action */}
             <button
@@ -1113,7 +1113,7 @@ export default function ChatArea({
                 setShowAttachmentMenu(!showAttachmentMenu);
                 setShowEmojiPicker(false);
               }}
-              className={`p-2.5 rounded-xl transition cursor-pointer ${
+              className={`p-2.5 rounded-full transition duration-300 cursor-pointer ${
                 showAttachmentMenu ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : 'hover:bg-[#1C1C1A] text-stone-400'
               }`}
               title="إرفاق ملفات"
@@ -1127,7 +1127,7 @@ export default function ChatArea({
                 setShowEmojiPicker(!showEmojiPicker);
                 setShowAttachmentMenu(false);
               }}
-              className={`p-2.5 rounded-xl transition cursor-pointer ${
+              className={`p-2.5 rounded-full transition duration-300 cursor-pointer ${
                 showEmojiPicker ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : 'hover:bg-[#1C1C1A] text-stone-400'
               }`}
               title="ملصقات ورموز"
@@ -1144,14 +1144,14 @@ export default function ChatArea({
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder={getTranslation(currentUser.language, 'typeMessage')}
-                className="w-full bg-[#121211] border border-[#2E2E2A] rounded-xl py-2.5 pl-4 pr-4 text-xs sm:text-sm text-white placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] transition-colors"
+                className="w-full bg-[#121213] border border-[#2E2E2A]/60 rounded-full py-3 px-5 text-xs sm:text-sm text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-[#C5A059]/30 focus:border-[#C5A059] transition-all"
               />
             </div>
 
             {/* Voice Record trigger */}
             <button
               onClick={startVoiceRecording}
-              className="p-2.5 hover:bg-[#1C1C1A] text-stone-400 hover:text-[#C5A059] rounded-xl transition cursor-pointer"
+              className="p-2.5 hover:bg-[#1C1C1A] text-stone-400 hover:text-[#C5A059] rounded-full transition duration-300 cursor-pointer"
               title="تسجيل رسالة صوتية"
             >
               <Mic className="w-5 h-5" />
@@ -1162,9 +1162,9 @@ export default function ChatArea({
               id="send_message_btn"
               onClick={handleSend}
               disabled={!inputText.trim()}
-              className={`p-2.5 rounded-xl font-black flex items-center justify-center transition-all cursor-pointer ${
+              className={`p-2.5 rounded-full font-black flex items-center justify-center transition-all duration-300 cursor-pointer ${
                 inputText.trim() 
-                  ? 'bg-gradient-to-r from-[#8A6E35] to-[#C5A059] text-stone-950 scale-105 shadow-lg shadow-[#C5A059]/20' 
+                  ? 'bg-gradient-to-r from-[#8A6E35] to-[#C5A059] text-stone-950 scale-105 shadow-lg shadow-[#C5A059]/35' 
                   : 'bg-[#1C1C1A] text-stone-600 border border-[#2E2E2A]/50 cursor-not-allowed'
               }`}
               title="إرسال"
