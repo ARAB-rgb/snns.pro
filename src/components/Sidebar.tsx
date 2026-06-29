@@ -477,7 +477,7 @@ export default function Sidebar({
           'shehri@snns.pro'
         ];
         const registeredNames = [
-          'أحمد الراشد', 'سارة السبيعي', 'عبدالله القحطاني', 'الأدمن 1007363904', 'الأدمن 139213', 'د. مريم حسن'
+          'أحمد الراشد', 'سارة السبيعي', 'عبدالله القحطاني', 'مستشار الدعم الفني', 'فريق تفعيل الحسابات', 'د. مريم حسن'
         ];
         
         if (registeredNames.includes(normName) || registeredEmails.includes(normEmail) || normEmail.endsWith('@snns.pro')) {
@@ -795,11 +795,15 @@ export default function Sidebar({
           <div className="text-right">
             <h2 className="font-extrabold text-sm text-white flex items-center gap-1.5 cursor-pointer hover:text-[#C5A059]" onClick={() => setShowSettingsModal(true)}>
               {currentUser.name}
-              {currentUser.isGoogleLinked && (
+              {currentUser.isGoogleLinked ? (
                 <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
                   <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Google
                 </span>
-              )}
+              ) : currentUser.email ? (
+                <span className="text-[9px] bg-emerald-950/80 text-emerald-400 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5 border border-emerald-800/40" title="مسجل عبر البريد الإلكتروني الآمن">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> عضو جديد ✉️
+                </span>
+              ) : null}
             </h2>
             <p className="text-[10px] text-[#A8A293] font-medium truncate max-w-[150px]">
               {currentUser.status === 'offline' 
@@ -912,6 +916,21 @@ export default function Sidebar({
           />
         </div>
       </div>
+
+      {/* SNNS Application Security Notice for Email Users */}
+      {!currentUser.isGoogleLinked && currentUser.email && (
+        <div className="mx-3 my-2.5 p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-xl flex items-start gap-2.5 text-right animate-fadeIn" dir="rtl">
+          <div className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold shrink-0 text-xs animate-pulse">
+            ✉️
+          </div>
+          <div className="space-y-0.5">
+            <span className="block text-[11px] font-black text-emerald-300">أهلاً بك في فئة الأعضاء الجدد!</span>
+            <p className="text-[10px] text-emerald-400 font-medium leading-relaxed">
+              أنت تستخدم الآن تطبيق <strong className="text-white font-bold">SNNS</strong> المطور والمحمي بطبقة تشفير معتمدة للتواصل الآمن وإرسال البلاغات وحماية الخصوصية بالكامل.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="p-2 bg-[#0B0B0A] border-b border-[#2E2E2A]/40">

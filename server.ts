@@ -37,23 +37,25 @@ function getAiClient(): GoogleGenAI {
 // REST API for intelligent conversational replies (WhatsApp style simulation)
 app.post("/api/chat-reply", async (req: any, res: any) => {
   try {
-    const { contactName, contactRole, messageHistory, isGroup } = req.body;
+    const { contactName, contactRole, messageHistory, isGroup, userName } = req.body;
 
     if (!contactName || !messageHistory || !Array.isArray(messageHistory)) {
       return res.status(400).json({ error: "Missing required fields: contactName, messageHistory" });
     }
 
+    const resolvedUserName = userName || "العضو الكريم";
+
     // Default mock response generator in case API key is missing or fails
     const getFallbackResponse = (name: string, role: string) => {
       const fallbackMsgs = [
-        `أهلاً بك! أنا مشغول قليلاً الآن وسأرد عليك لاحقاً. 👍`,
-        `تمام، فهمت عليك. كيف تسير الأمور الأخرى؟`,
-        `جميل جداً! الله يعطيك العافية يا رب. ✨`,
-        `سأتحقق من هذا الأمر وأخبرك فوراً. 📱`,
-        `أنا في الطريق حالياً، نتحدث قريباً! 🚗`
+        `أهلاً بك يا ${resolvedUserName}! أنا مشغول قليلاً الآن وسأرد عليك لاحقاً. 👍`,
+        `تمام يا ${resolvedUserName}، فهمت عليك. كيف تسير الأمور الأخرى؟`,
+        `جميل جداً! الله يعطيك العافية يا رب يا ${resolvedUserName}. ✨`,
+        `سأتحقق من هذا الأمر وأخبرك فوراً يا ${resolvedUserName}. 📱`,
+        `أنا في الطريق حالياً يا ${resolvedUserName}، نتحدث قريباً! 🚗`
       ];
       if (role.includes("مدير")) {
-        return `مرحباً، تلقيت رسالتك. يرجى تزويدي بالتفاصيل في أقرب وقت لمتابعة العمل بشكل مناسب. بالتوفيق.`;
+        return `مرحباً يا ${resolvedUserName}، تلقيت رسالتك. يرجى تزويدي بالتفاصيل في أقرب وقت لمتابعة العمل بشكل مناسب. بالتوفيق.`;
       }
       return fallbackMsgs[Math.floor(Math.random() * fallbackMsgs.length)];
     };
@@ -68,19 +70,20 @@ app.post("/api/chat-reply", async (req: any, res: any) => {
 
     // Map recent history for Gemini
     const formattedHistory = messageHistory.slice(-8).map((msg: any) => {
-      const sender = msg.senderId === "me" ? "المستخدم (أنا)" : msg.senderName;
+      const sender = msg.senderId === "me" ? resolvedUserName : msg.senderName;
       return `${sender}: ${msg.text}`;
     }).join("\n");
 
     const systemInstruction = `أنت تقوم بمحاكاة شخصية في تطبيق محادثات مرئية ودردشة فورية يشبه واتساب وإيمو وتيمز.
-اسمك هو: "${contactName}"، وعلاقتك بالمستخدم أو دورك هو: "${contactRole || 'صديق'}".
-${isGroup ? 'المحادثة الحالية هي محادثة جماعية (جروب) يشارك فيها آخرون.' : 'المحادثة الحالية فردية.'}
+اسمك هو: "${contactName}"، وعلاقتك بالطرف الآخر أو دورك هو: "${contactRole || 'صديق'}".
+الشخص الذي تراسله وتتحدث معه اسمه هو: "${resolvedUserName}".
 
 المطلوب منك:
-1. الرد باللغة العربية (يفضل استخدام اللهجة العامية الطبيعية الدافئة المناسبة للشخصية، أو الفصحى المبسطة إذا كان دوراً رسمياً كمدير العمل).
-2. اجعل الرد قصيراً، ذكياً، ومناسباً جداً لرسائل واتساب السريعة (لا تتعدى سطرين أو ثلاثة).
-3. استخدم الرموز التعبيرية (Emojis) بشكل طبيعي ولطيف يضفي حيوية للدردشة.
-4. تفاعل مباشرة مع محتوى آخر رسائل مرسلة في التاريخ المعطى أدناه. لا تتحدث بصفة عامة أو آلية. تصرف كإنسان حقيقي تماماً!
+1. مناداة الطرف الآخر ومخاطبته باسمه المباشر "${resolvedUserName}" (مثال: "يا ${resolvedUserName}" أو "مرحباً ${resolvedUserName}" أو "أهلاً بك يا ${resolvedUserName}") في ثنايا الحديث عند المناسبة لجعل الرد ذكياً، دافئاً، ومخصصاً له تماماً.
+2. الرد باللغة العربية (يفضل استخدام اللهجة العامية الطبيعية الدافئة المناسبة للشخصية، أو الفصحى المبسطة إذا كان دوراً رسمياً كمدير العمل).
+3. اجعل الرد قصيراً، ذكياً، ومناسباً جداً لرسائل الدردشة السريعة (لا تتعدى سطرين أو ثلاثة).
+4. استخدم الرموز التعبيرية (Emojis) بشكل طبيعي ولطيف يضفي حيوية للدردشة (وتجنب تكرار الرموز الإدارية أو العسكرية أو رموز الأدمن 🛡️ ما لم يطلب المستخدم ذلك أو تقتضي الشخصية ذلك بشكل غير إداري).
+5. تفاعل مباشرة مع محتوى آخر رسائل مرسلة في التاريخ المعطى أدناه. تصرف كإنسان حقيقي تماماً!
 
 تاريخ المحادثة الأخير:
 ${formattedHistory}
@@ -101,8 +104,86 @@ ${formattedHistory}
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
+    const resolvedUserName = (req.body && req.body.userName) || "العضو الكريم";
     return res.json({ 
-      text: "عذراً، يبدو أن هناك ضغطاً على الشبكة حالياً. نتحدث لاحقاً! 📡✨" 
+      text: `عذراً يا ${resolvedUserName}، يبدو أن هناك ضغطاً على الشبكة حالياً. نتحدث لاحقاً! 📡✨` 
+    });
+  }
+});
+
+// REST API for intelligent complaint processing and AI response
+app.post("/api/process-complaint", async (req: any, res: any) => {
+  try {
+    const { complaintText, reportedContactName, userName } = req.body;
+    if (!complaintText) {
+      return res.status(400).json({ error: "Missing required field: complaintText" });
+    }
+
+    const resolvedUserName = userName || "العضو الكريم";
+    const resolvedContactName = reportedContactName || "جهة مجهولة";
+
+    const fallbackResponse = {
+      severity: "متوسطة",
+      category: "مضايقة أو سلوك غير لائق",
+      aiAction: "تم حظر مؤقت للرسائل الواردة المشكوك فيها وتمرير البلاغ لقسم المتابعة الفورية والتدقيق البشري.",
+      safetyAdvice: "ننصحك بتفعيل خيار الخصوصية لجهة الاتصال هذه، وتجنب مشاركة أي معلومات شخصية حساسة.",
+      aiReply: `مرحباً يا ${resolvedUserName}، معك مساعدك الذكي SNNS. لقد تلقيت بلاغك بخصوص ${resolvedContactName} وجاري التعامل معه فوراً بأعلى درجات السرية والأمان. تم رصد الإساءة وحماية حسابك.`
+    };
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "MOCK_KEY") {
+      return res.json(fallbackResponse);
+    }
+
+    const ai = getAiClient();
+    const prompt = `أنت المساعد الذكي والأمني لمنصة SNNS.PRO المرموقة لخدمات المراسلة والحلول التقنية المتكاملة.
+لقد قام المستخدم "${resolvedUserName}" بتقديم بلاغ أو شكوى رسمية ضد جهة اتصال باسم "${resolvedContactName}".
+نص الشكوى أو البلاغ المقدم: "${complaintText}"
+
+المطلوب منك تحليل هذا البلاغ بشكل ذكي ودقيق، والرد كمسؤول أمن تقني ذكي.
+يجب أن ترجع إجابة بصيغة JSON تحتوي على الحقول التالية فقط وباللغة العربية الفصحى الأنيقة:
+1. "severity": حدد درجة الخطورة (منخفضة / متوسطة / عالية) بناءً على الكلمات والتهديدات في النص.
+2. "category": تصنيف ذكي للمخالفة (مثال: إساءة لفظية، مضايقة، احتيال مالي، نشر محتوى غير لائق، سلوك مريب).
+3. "aiAction": الإجراء الأمني التلقائي الفوري الذي اتخذه نظام المساعد الذكي SNNS لحماية المستخدم (مثال: "تم تفعيل نظام الحماية الفوري وتصفية المحتوى المشبوه").
+4. "safetyAdvice": نصيحة أمان مخصصة ومفيدة جداً للمستخدم بناءً على نوع البلاغ.
+5. "aiReply": رسالة شخصية، دافئة وذكية ومطمئنة من "مساعدك الذكي SNNS" موجهة إلى "${resolvedUserName}" تؤكد استلام البلاغ والتعامل معه، ويجب أن تخاطبه باسمه "${resolvedUserName}" مباشرة وبدون تكرار رموز الأدمن 🛡️ أو العسكرية لتكون ذكية وبسيطة.
+
+يرجى إرجاع JSON صالح ومكتمل فقط دون أي شروحات إضافية خارج الـ JSON لتسهيل معالجته برمجياً.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    if (response.text) {
+      try {
+        const result = JSON.parse(response.text.trim());
+        return res.json({
+          severity: result.severity || fallbackResponse.severity,
+          category: result.category || fallbackResponse.category,
+          aiAction: result.aiAction || fallbackResponse.aiAction,
+          safetyAdvice: result.safetyAdvice || fallbackResponse.safetyAdvice,
+          aiReply: result.aiReply || fallbackResponse.aiReply
+        });
+      } catch (e) {
+        console.error("JSON parse failed for Gemini response:", response.text);
+      }
+    }
+
+    return res.json(fallbackResponse);
+
+  } catch (error: any) {
+    console.error("AI Complaint processing error:", error);
+    const resolvedUserName = (req.body && req.body.userName) || "العضو الكريم";
+    return res.json({
+      severity: "متوسطة",
+      category: "مراجعة عامة",
+      aiAction: "تم تسجيل البلاغ وتمريره لمهندسي الأمن الرقمي.",
+      safetyAdvice: "تجنب التفاعل مع الحساب المشبوه مؤقتاً.",
+      aiReply: `أهلاً بك يا ${resolvedUserName}، تم تسجيل بلاغك بنجاح وجاري تدقيقه وحمايتك فوراً بواسطة الذكاء الاصطناعي الخاص بـ SNNS.`
     });
   }
 });

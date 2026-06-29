@@ -152,7 +152,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             'shehri@snns.pro'
           ];
           const registeredNames = [
-            'أحمد الراشد', 'سارة السبيعي', 'عبدالله القحطاني', 'الأدمن 1007363904', 'الأدمن 139213', 'د. مريم حسن'
+            'أحمد الراشد', 'سارة السبيعي', 'عبدالله القحطاني', 'مستشار الدعم الفني', 'فريق تفعيل الحسابات', 'د. مريم حسن'
           ];
           
           if (registeredNames.includes(normName) || registeredEmails.includes(normEmail) || normEmail.endsWith('@snns.pro')) {
@@ -344,13 +344,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       const isValidPassword = adminPassword === adminUsername || adminPassword === 'admin' || adminPassword === '123456';
       
       if (isValidPassword) {
-        setSuccess('تم التحقق بنجاح! أهلاً بك يا سيادة الأدمن 🛡️');
+        setSuccess('تم التحقق بنجاح! أهلاً بك في نظام الدعم والتحكم ⚙️');
         const adminId = adminUsername;
-        const adminName = isSpecialAdmin1 ? 'الأدمن 1007363904' : 'الأدمن 139213';
-        const adminAvatar = isSpecialAdmin1 ? '🛡️' : '🛠️';
+        const adminName = isSpecialAdmin1 ? 'مستشار الدعم الفني' : 'فريق تفعيل الحسابات';
+        const adminAvatar = isSpecialAdmin1 ? '👤' : '⚙️';
         const adminRole = isSpecialAdmin1 
-          ? 'الأدمن المسؤول عن الشكاوي والاشتراكات ومراقبة الاشياء المسيئة وتقييم البلاغات'
-          : 'الأدمن المسؤول عن الدعم الفني وتفعيل الاشتراكات ومراقبة المحتوى المسيء والرد السريع';
+          ? 'مستشار الدعم الفني والرد على الشكاوى والحلول التقنية المتكاملة'
+          : 'مسؤول تفعيل الحسابات والمساعدة السريعة للمستخدمين';
 
         setTimeout(() => {
           onLoginSuccess({

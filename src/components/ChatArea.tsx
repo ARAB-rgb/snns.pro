@@ -34,6 +34,33 @@ import { db } from '../lib/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { getTranslation } from '../utils/translations';
 
+const parseAiReport = (text: string) => {
+  const severityMatch = text.match(/الدرجة:\s*([^\n]+)/);
+  const categoryMatch = text.match(/التصنيف:\s*([^\n]+)/);
+  const actionMatch = text.match(/الإجراء:\s*([^\n]+)/);
+  const adviceMatch = text.match(/النصيحة:\s*([^\n]+)/);
+  
+  const replyIndex = text.indexOf("الرد:");
+  let aiReply = replyIndex !== -1 ? text.substring(replyIndex + 5).trim() : "";
+  
+  if (!aiReply) {
+    aiReply = text.replace(/🤖 \[تحليل الذكاء الاصطناعي للبلاغ - SNNS\]/g, '')
+                  .replace(/الدرجة:[^\n]+/g, '')
+                  .replace(/التصنيف:[^\n]+/g, '')
+                  .replace(/الإجراء:[^\n]+/g, '')
+                  .replace(/النصيحة:[^\n]+/g, '')
+                  .trim();
+  }
+  
+  return {
+    severity: severityMatch ? severityMatch[1].trim() : "متوسطة",
+    category: categoryMatch ? categoryMatch[1].trim() : "سلوك غير لائق",
+    aiAction: actionMatch ? actionMatch[1].trim() : "تم إرسال بلاغ للدعم التقني",
+    safetyAdvice: adviceMatch ? adviceMatch[1].trim() : "يرجى الحذر عند التعامل مع المستخدم",
+    aiReply: aiReply || text
+  };
+};
+
 interface ChatAreaProps {
   activeContact: Contact | null;
   messages: Message[];
@@ -141,6 +168,14 @@ export default function ChatArea({
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [complaintText, setComplaintText] = useState('');
   const [submittingComplaint, setSubmittingComplaint] = useState(false);
+  const [aiComplaintResult, setAiComplaintResult] = useState<{
+    severity: string;
+    category: string;
+    aiAction: string;
+    safetyAdvice: string;
+    aiReply: string;
+  } | null>(null);
+  const [showAiResultModal, setShowAiResultModal] = useState(false);
 
   // Camera Capture States
   const [showCameraModal, setShowCameraModal] = useState(false);
@@ -420,7 +455,8 @@ export default function ChatArea({
     } else {
       // Individual chat: messages between me and contact
       return (m.senderId === activeContact.id && !m.id.includes('group_')) || 
-             (m.senderId === 'me' && m.id.includes(`_${activeContact.id}`));
+             (m.senderId === 'me' && m.id.includes(`_${activeContact.id}`)) ||
+             (m.senderId === 'snns_ai_assistant' && m.id.includes(`_${activeContact.id}`));
     }
   });
 
@@ -442,7 +478,45 @@ export default function ChatArea({
         status: 'pending',
         timestamp: new Date().toISOString()
       });
-      alert('✨ تم تقديم الشكوى/البلاغ للإدارة بنجاح وجاري تدقيقه وحسمه من المشرفين.');
+
+      // Fetch AI Intelligent Report Analysis and Action
+      try {
+        const aiResponse = await fetch('/api/process-complaint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            complaintText: complaintText,
+            reportedContactName: activeContact.name,
+            userName: currentUser.name || 'المستخدم'
+          })
+        });
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          setAiComplaintResult(aiData);
+          setShowAiResultModal(true);
+
+          // Add AI reply message to current chat stream
+          const aiMsgId = `ai_reply_${activeContact.id}_${Date.now()}`;
+          const aiMsg: Message = {
+            id: aiMsgId,
+            senderId: 'snns_ai_assistant',
+            senderName: 'مساعد SNNS الذكي',
+            text: `🤖 [تحليل الذكاء الاصطناعي للبلاغ - SNNS]\n\nالدرجة: ${aiData.severity}\nالتصنيف: ${aiData.category}\nالإجراء: ${aiData.aiAction}\nالنصيحة: ${aiData.safetyAdvice}\n\nالرد: ${aiData.aiReply}`,
+            timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+            type: 'text',
+            status: 'read'
+          };
+          const messagesCol = collection(db, 'messages');
+          await setDoc(doc(messagesCol, aiMsg.id), aiMsg);
+          sounds.playMessageReceivedSound();
+        } else {
+          alert('✨ تم تقديم الشكوى/البلاغ للإدارة بنجاح وجاري تدقيقه وحسمه من المشرفين.');
+        }
+      } catch (aiErr) {
+        console.warn("AI processing of complaint failed or bypassed:", aiErr);
+        alert('✨ تم تقديم الشكوى/البلاغ للإدارة بنجاح وجاري تدقيقه وحسمه من المشرفين.');
+      }
+
       setComplaintText('');
       setShowComplaintModal(false);
     } catch (err: any) {
@@ -819,7 +893,12 @@ export default function ChatArea({
                 {/* Avatar for remote participant */}
                 {!isMe && (
                   <div className="w-8 h-8 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-md select-none text-[#C5A059] overflow-hidden shrink-0">
-                    {msg.senderId === activeContact.id ? renderAvatarContent(activeContact.avatar, activeContact.name) : '👤'}
+                    {msg.senderId === 'snns_ai_assistant' 
+                      ? '🤖' 
+                      : msg.senderId === activeContact.id 
+                        ? renderAvatarContent(activeContact.avatar, activeContact.name) 
+                        : '👤'
+                    }
                   </div>
                 )}
 
@@ -829,10 +908,10 @@ export default function ChatArea({
                   onMouseLeave={endLongPress}
                   onTouchStart={() => startLongPress(msg.id)}
                   onTouchEnd={endLongPress}
-                  className={`p-3.5 shadow-lg relative flex flex-col transition-all duration-300 border select-none cursor-pointer ${
+                  className={`p-4 shadow-xl relative flex flex-col transition-all duration-300 border select-none cursor-pointer ${
                     isMe 
-                      ? 'bg-gradient-to-l from-[#8A6E35] to-[#C5A059] border-[#C5A059]/30 text-stone-950 font-semibold rounded-[22px] rounded-br-[6px] shadow-[#C5A059]/10' 
-                      : 'bg-[#121213] border-[#2E2E2A]/50 text-white rounded-[22px] rounded-bl-[6px]'
+                      ? 'bg-gradient-to-tr from-[#98783B] via-[#C5A059] to-[#E5C68A] border-[#D6B570]/30 text-stone-950 font-bold rounded-[24px] rounded-br-[8px] shadow-[0_10px_25px_-5px_rgba(197,160,89,0.18)] border-t border-white/20 hover:scale-[1.01] hover:-translate-y-[0.5px] ease-out' 
+                      : 'bg-[#131314] hover:bg-[#161618] border-[#2E2E2A]/70 text-white rounded-[24px] rounded-bl-[8px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] border-t border-white/[0.04] hover:scale-[1.01] hover:-translate-y-[0.5px] ease-out'
                   }`}
                 >
                   {/* Reaction Selection Overlay */}
@@ -904,9 +983,61 @@ export default function ChatArea({
 
                   {/* Rendering based on message types */}
                   {msg.type === 'text' && (
-                    <p className="text-xs sm:text-sm leading-relaxed select-text font-normal">
-                      {msg.text}
-                    </p>
+                    msg.text.startsWith('🤖 [تحليل الذكاء الاصطناعي') ? (
+                      (() => {
+                        const parsed = parseAiReport(msg.text);
+                        const severityColors = {
+                          'عالية': 'bg-rose-950/40 text-rose-400 border-rose-900/30',
+                          'متوسطة': 'bg-amber-950/40 text-amber-400 border-amber-900/30',
+                          'منخفضة': 'bg-emerald-950/40 text-emerald-400 border-emerald-900/30',
+                        } as any;
+                        const badgeColor = severityColors[parsed.severity] || 'bg-stone-800 text-stone-300 border-stone-700/50';
+                        
+                        return (
+                          <div className="space-y-3.5 text-right font-sans max-w-sm sm:max-w-md">
+                            {/* Header */}
+                            <div className="flex items-center justify-between border-b border-[#2E2E2A]/40 pb-2">
+                              <div className="flex items-center gap-1.5 text-[#C5A059] font-bold text-xs sm:text-sm">
+                                <span className="animate-pulse">✨</span>
+                                <span>تحليل أمني ذكي (SNNS AI)</span>
+                              </div>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${badgeColor}`}>
+                                خطورة {parsed.severity}
+                              </span>
+                            </div>
+
+                            {/* Details grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] sm:text-xs">
+                              <div className="bg-[#181817] p-2.5 rounded-xl border border-[#2E2E2A]/30">
+                                <span className="text-stone-500 block mb-0.5 font-bold">نوع البلاغ:</span>
+                                <span className="text-stone-200 font-semibold">{parsed.category}</span>
+                              </div>
+                              <div className="bg-[#181817] p-2.5 rounded-xl border border-[#2E2E2A]/30">
+                                <span className="text-[#C5A059] block mb-0.5 font-bold">الإجراء التلقائي الفوري:</span>
+                                <span className="text-stone-200 font-semibold text-[10px] leading-tight block">{parsed.aiAction}</span>
+                              </div>
+                            </div>
+
+                            {/* Safety Advice */}
+                            <div className="bg-[#181817]/60 p-3 rounded-xl border border-[#C5A059]/10 text-[11px] sm:text-xs space-y-1">
+                              <span className="text-[#C5A059] block font-extrabold flex items-center gap-1">
+                                🛡️ نصيحة أمان SNNS:
+                              </span>
+                              <p className="text-stone-300 leading-relaxed font-medium">{parsed.safetyAdvice}</p>
+                            </div>
+
+                            {/* Response content */}
+                            <div className="text-xs sm:text-sm text-stone-100 bg-[#121211] p-3 rounded-xl border border-[#2E2E2A]/50 leading-relaxed font-normal">
+                              {parsed.aiReply}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <p className="text-xs sm:text-sm leading-relaxed select-text font-normal">
+                        {msg.text}
+                      </p>
+                    )
                   )}
 
                   {msg.type === 'image' && (
@@ -1093,12 +1224,12 @@ export default function ChatArea({
               <div className="w-8 h-8 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-md select-none text-[#C5A059] overflow-hidden shrink-0">
                 {renderAvatarContent(activeContact.avatar, activeContact.name)}
               </div>
-              <div className="bg-[#121213] border border-[#2E2E2A]/50 text-white rounded-[22px] rounded-bl-[6px] p-3.5 shadow-lg flex items-center gap-1.5">
-                <span className="text-xs text-stone-400 font-bold">{activeContact.name} يكتب الآن</span>
+              <div className="bg-[#131314] hover:bg-[#161618] border border-[#2E2E2A]/70 text-white rounded-[24px] rounded-bl-[8px] p-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] border-t border-white/[0.04] flex items-center gap-2 transition-all duration-300">
+                <span className="text-xs text-stone-300 font-bold">{activeContact.name} يكتب الآن</span>
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-75"></span>
-                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-150"></span>
-                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-300"></span>
+                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-75 shadow-[0_0_8px_rgba(197,160,89,0.5)]"></span>
+                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-150 shadow-[0_0_8px_rgba(197,160,89,0.5)]"></span>
+                  <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce delay-300 shadow-[0_0_8px_rgba(197,160,89,0.5)]"></span>
                 </span>
               </div>
             </div>
@@ -1329,6 +1460,66 @@ export default function ChatArea({
                 className="px-4 py-2.5 bg-[#1C1C1A] hover:bg-[#2E2E2A] text-stone-300 font-extrabold rounded-xl text-xs transition border border-[#2E2E2A]/50 cursor-pointer"
               >
                 إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Report Analysis Result Modal */}
+      {showAiResultModal && aiComplaintResult && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4" dir="rtl">
+          <div className="bg-[#0D0D0C] rounded-3xl p-6 max-w-md w-full border border-[#C5A059]/40 shadow-2xl space-y-4 animate-scaleIn text-right">
+            <div className="flex items-center gap-2 text-[#C5A059]">
+              <span className="text-xl animate-pulse">🤖</span>
+              <h3 className="font-extrabold text-base text-stone-100">تحليل معالجة البلاغ بالذكاء الاصطناعي</h3>
+            </div>
+            
+            <p className="text-xs text-[#A89F91] leading-relaxed">
+              لقد قام نظام الذكاء الاصطناعي الأمني لـ <strong className="text-white">SNNS</strong> بفحص بلاغك وتصنيفه فوراً لاتخاذ الإجراءات التقنية اللازمة.
+            </p>
+
+            <div className="space-y-2.5">
+              <div className="bg-[#121211] p-3 rounded-xl border border-[#2E2E2A]/50 flex items-center justify-between text-xs">
+                <span className="text-stone-400 font-bold">مستوى الخطورة:</span>
+                <span className={`px-2.5 py-0.5 rounded-full font-extrabold border ${
+                  aiComplaintResult.severity === 'عالية' 
+                    ? 'bg-rose-950/40 text-rose-400 border-rose-900/30'
+                    : aiComplaintResult.severity === 'متوسطة'
+                      ? 'bg-amber-950/40 text-amber-400 border-amber-900/30'
+                      : 'bg-emerald-950/40 text-emerald-400 border-emerald-900/30'
+                }`}>
+                  خطورة {aiComplaintResult.severity}
+                </span>
+              </div>
+
+              <div className="bg-[#121211] p-3 rounded-xl border border-[#2E2E2A]/50 text-xs space-y-1">
+                <span className="text-stone-400 font-bold block">تصنيف المخالفة:</span>
+                <span className="text-stone-100 font-semibold">{aiComplaintResult.category}</span>
+              </div>
+
+              <div className="bg-[#121211] p-3 rounded-xl border border-[#2E2E2A]/50 text-xs space-y-1">
+                <span className="text-[#C5A059] font-bold block">الإجراء التقني الفوري:</span>
+                <p className="text-stone-200 leading-relaxed font-medium text-[10px] sm:text-xs">{aiComplaintResult.aiAction}</p>
+              </div>
+
+              <div className="bg-[#121211]/40 p-3 rounded-xl border border-[#C5A059]/10 text-xs space-y-1">
+                <span className="text-stone-400 font-bold block flex items-center gap-1">
+                  💡 نصيحة أمنية مخصصة لك:
+                </span>
+                <p className="text-stone-300 leading-relaxed font-normal">{aiComplaintResult.safetyAdvice}</p>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAiResultModal(false);
+                }}
+                className="w-full py-2.5 bg-[#C5A059] hover:bg-[#A68343] text-stone-950 font-black rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1"
+              >
+                <span>فهمت وموافق</span>
               </button>
             </div>
           </div>

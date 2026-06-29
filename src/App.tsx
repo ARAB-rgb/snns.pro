@@ -904,7 +904,8 @@ export default function App() {
             contactName: activeContact.name,
             contactRole: activeContact.role,
             messageHistory: updatedHistory,
-            isGroup: activeContact.isGroup
+            isGroup: activeContact.isGroup,
+            userName: currentUser.name || 'المستخدم'
           }),
         });
 
@@ -1230,60 +1231,10 @@ export default function App() {
       });
     }
 
-    // Automated custom welcome message trigger on first login
+    // Automated custom welcome message trigger on first login (Disabled as per user request)
     const welcomeKey = `welcome_sent_${user.id}`;
     if (!localStorage.getItem(welcomeKey)) {
       localStorage.setItem(welcomeKey, 'true');
-
-      // Formulate a beautiful personalized greeting based on user profile details
-      const greeting = `أهلاً بك يا ${user.name || 'العضو الكريم'} في منصة SNNS.PRO المعتمدة! 🛡️✨`;
-      const details = `يسعدنا جداً انضمامك إلينا بصفة [${user.role || 'عضو جديد'}]. نؤكد لك أن حسابك المرتبط بالبريد الإلكتروني (${user.email || 'guest@snns.pro'}) آمن بالكامل ومحمي بطبقة تشفير معتمدة 256-bit SSL ومطابق تماماً لكل مواصفات منصة Google Cloud Console.`;
-      const adminPromise = `أنا الأدمن 1007363904، المشرف الرئيسي للرقابة والدعم هنا. مهمتي التأكد من توفير تجربة خالية من الإساءات والرد على جميع شكاواك وبلاغاتك في أسرع وقت. يمكنك دائماً بدء محادثة أو مكالمة WebRTC معي أو مع فريق الدعم في أي وقت!`;
-      const fullText = `${greeting}\n\n${details}\n\n${adminPromise}`;
-
-      const welcomeMsg: Message = {
-        id: `welcome_${user.id}_${Date.now()}`,
-        senderId: '1007363904', // The main admin
-        senderName: 'الأدمن 1007363904',
-        text: fullText,
-        timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-        type: 'text',
-        status: 'read'
-      };
-
-      // Play soft greeting sound and show premium welcome modal
-      setTimeout(() => {
-        try {
-          sounds.playMessageReceivedSound();
-        } catch (e) {
-          console.warn("Audio synthesizer not ready yet:", e);
-        }
-        setWelcomeNotification({
-          show: true,
-          title: 'رسالة ترحيب مخصصة وتأكيد الأمان',
-          message: greeting,
-          senderName: 'الأدمن 1007363904',
-          senderAvatar: '🛡️',
-          fullMsg: fullText
-        });
-      }, 1200);
-
-      // Append to state messages
-      setMessages((prev) => {
-        // Prevent duplicate messages
-        if (prev.some(m => m.id.startsWith(`welcome_${user.id}`))) {
-          return prev;
-        }
-        return [...prev, welcomeMsg];
-      });
-
-      // Persist to Firestore if available
-      try {
-        await setDoc(doc(db, 'messages', welcomeMsg.id), welcomeMsg);
-        syncMessageToSupabase(welcomeMsg);
-      } catch (err) {
-        console.warn("Firestore welcome write bypassed:", err);
-      }
     }
   };
 
