@@ -74,6 +74,7 @@ interface SidebarProps {
     status?: 'online' | 'offline' | 'away';
     role?: string;
     language?: string;
+    themeMode?: 'dark' | 'light';
   };
   onUpdateCurrentUser: (user: any) => void;
   themeBackground: string;
@@ -211,6 +212,7 @@ export default function Sidebar({
 
   const [editUserStatus, setEditUserStatus] = useState<'online' | 'offline' | 'away'>(currentUser.status || 'online');
   const [editLanguage, setEditLanguage] = useState(currentUser.language || 'ar');
+  const [editThemeMode, setEditThemeMode] = useState<'dark' | 'light'>(currentUser.themeMode || 'dark');
   const [notificationsEnabled, setNotificationsEnabledState] = useState(() => areNotificationsEnabled());
 
   // Privacy Pin states
@@ -240,6 +242,7 @@ export default function Sidebar({
     setEditAvatarUrl(currentUser.avatarUrl || '');
     setEditUserStatus(currentUser.status || 'online');
     setEditLanguage(currentUser.language || 'ar');
+    setEditThemeMode(currentUser.themeMode || 'dark');
     if (!showSettingsModal) {
       setSettingsTab('profile');
       setSyncMessage(null);
@@ -766,8 +769,15 @@ export default function Sidebar({
       avatarType: finalAvatarType,
       avatarUrl: editAvatarUrl,
       status: editUserStatus,
-      language: editLanguage
+      language: editLanguage,
+      themeMode: editThemeMode
     });
+    // Auto-update theme background default preset for harmony
+    if (editThemeMode === 'light') {
+      onUpdateThemeBackground('bg_cream');
+    } else {
+      onUpdateThemeBackground('bg_luxury');
+    }
     setShowSettingsModal(false);
     alert("⚙️ تم حفظ تعديلات الملف الشخصي بنجاح.");
   };
@@ -776,15 +786,17 @@ export default function Sidebar({
     .filter(c => c.isGroup)
     .reduce((sum, c) => sum + getUnreadCount(c.id), 0);
 
+  const isLightMode = currentUser.themeMode === 'light';
+
   return (
-    <div id="app_sidebar" className="w-full md:w-96 flex flex-col h-full bg-[#0B0B0A] border-l border-[#2E2E2A]/60 text-white select-none">
+    <div id="app_sidebar" className={`w-full md:w-96 flex flex-col h-full ${isLightMode ? 'bg-[#FAF9F6] border-l border-[#E5E1D8] text-stone-800' : 'bg-[#0B0B0A] border-l border-[#2E2E2A]/60 text-white'} select-none`}>
       
       {/* Header Info */}
-      <div className="p-4 bg-[#121211] border-b border-[#2E2E2A]/60 flex items-center justify-between">
+      <div className={`p-4 ${isLightMode ? 'bg-[#F2F0E9] border-b border-[#E5E1D8]' : 'bg-[#121211] border-b border-[#2E2E2A]/60'} flex items-center justify-between`}>
         <div className="flex items-center gap-3">
           <div className="relative cursor-pointer" onClick={() => setShowSettingsModal(true)} title="الملف الشخصي والإعدادات">
             {renderUserAvatar()}
-            <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-[#121211] rounded-full ${
+            <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 ${isLightMode ? 'border-[#F2F0E9]' : 'border-[#121211]'} rounded-full ${
               currentUser.status === 'offline' 
                 ? 'bg-gray-400' 
                 : currentUser.status === 'away' 
@@ -793,7 +805,7 @@ export default function Sidebar({
             }`}></span>
           </div>
           <div className="text-right">
-            <h2 className="font-extrabold text-sm text-white flex items-center gap-1.5 cursor-pointer hover:text-[#C5A059]" onClick={() => setShowSettingsModal(true)}>
+            <h2 className={`font-extrabold text-sm ${isLightMode ? 'text-stone-850' : 'text-white'} flex items-center gap-1.5 cursor-pointer hover:text-[#C5A059]`} onClick={() => setShowSettingsModal(true)}>
               {currentUser.name}
               {currentUser.isGoogleLinked ? (
                 <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
@@ -903,8 +915,8 @@ export default function Sidebar({
       </div>
 
       {/* Search Input */}
-      <div className="p-3 bg-[#0B0B0A]/95 border-b border-[#2E2E2A]/40">
-        <div className="relative flex items-center apple-search-bar">
+      <div className={`p-3 ${isLightMode ? 'bg-[#FAF9F6] border-b border-[#E5E1D8]' : 'bg-[#0B0B0A]/95 border-b border-[#2E2E2A]/40'}`}>
+        <div className={`relative flex items-center apple-search-bar ${isLightMode ? 'bg-stone-100 rounded-2xl' : ''}`}>
           <Search className="absolute right-3 w-4 h-4 text-[#C5A059] pointer-events-none" />
           <input
             id="search_contacts_input"
@@ -912,36 +924,44 @@ export default function Sidebar({
             placeholder={getTranslation(currentUser.language, 'searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent text-xs text-white pl-4 pr-10 py-3 focus:outline-none transition-colors placeholder-stone-500 font-medium"
+            className={`w-full bg-transparent text-xs pl-4 pr-10 py-3 focus:outline-none transition-colors font-medium ${
+              isLightMode ? 'text-stone-800 placeholder-stone-400' : 'text-white placeholder-stone-500'
+            }`}
           />
         </div>
       </div>
 
       {/* SNNS Application Security Notice for Email Users */}
       {!currentUser.isGoogleLinked && currentUser.email && (
-        <div className="mx-3 my-2.5 p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-xl flex items-start gap-2.5 text-right animate-fadeIn" dir="rtl">
-          <div className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold shrink-0 text-xs animate-pulse">
+        <div className={`mx-3 my-2.5 p-3 rounded-xl flex items-start gap-2.5 text-right animate-fadeIn border ${
+          isLightMode 
+            ? 'bg-stone-50 border-stone-200 text-stone-600' 
+            : 'bg-emerald-950/10 border-emerald-900/20 text-stone-300'
+        }`} dir="rtl">
+          <div className={`p-1 px-1.5 rounded-lg shrink-0 text-xs ${
+            isLightMode ? 'bg-stone-100 text-[#C5A059]' : 'bg-emerald-950 border border-emerald-800 text-emerald-400'
+          }`}>
             ✉️
           </div>
           <div className="space-y-0.5">
-            <span className="block text-[11px] font-black text-emerald-300">أهلاً بك في فئة الأعضاء الجدد!</span>
-            <p className="text-[10px] text-emerald-400 font-medium leading-relaxed">
-              أنت تستخدم الآن تطبيق <strong className="text-white font-bold">SNNS</strong> المطور والمحمي بطبقة تشفير معتمدة للتواصل الآمن وإرسال البلاغات وحماية الخصوصية بالكامل.
+            <span className={`block text-[11px] font-black ${isLightMode ? 'text-stone-800' : 'text-emerald-300'}`}>أهلاً بك في فئة الأعضاء الجدد!</span>
+            <p className={`text-[10px] leading-relaxed ${isLightMode ? 'text-stone-500' : 'text-stone-300'}`}>
+              أنت تستخدم الآن تطبيق <strong className="font-bold">SNNS</strong> المطور للتواصل الآمن وحماية الخصوصية بالكامل.
             </p>
           </div>
         </div>
       )}
 
       {/* Tabs Navigation */}
-      <div className="p-2 bg-[#0B0B0A] border-b border-[#2E2E2A]/40">
-        <div className="flex bg-[#121213] p-1 rounded-2xl text-[11px] font-bold text-stone-400 gap-1">
+      <div className={`p-2 ${isLightMode ? 'bg-[#FAF9F6] border-b border-[#E5E1D8]' : 'bg-[#0B0B0A] border-b border-[#2E2E2A]/40'}`}>
+        <div className={`flex ${isLightMode ? 'bg-[#F2F0E9] text-stone-500' : 'bg-[#121213] text-stone-400'} p-1 rounded-2xl text-[11px] font-bold gap-1`}>
           <button
             id="tab_chats"
             onClick={() => setActiveTab('chats')}
             className={`flex-1 min-w-[65px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
               activeTab === 'chats' 
-                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
-                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+                ? `text-[#C5A059] ${isLightMode ? 'bg-white shadow-xs border border-stone-200' : 'bg-[#1C1C1E] border border-[#C5A059]/20 shadow-sm'} font-extrabold` 
+                : `${isLightMode ? 'hover:bg-white/50 hover:text-stone-800' : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'}`
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -953,8 +973,8 @@ export default function Sidebar({
             onClick={() => setActiveTab('groups')}
             className={`flex-1 min-w-[70px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
               activeTab === 'groups' 
-                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
-                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+                ? `text-[#C5A059] ${isLightMode ? 'bg-white shadow-xs border border-stone-200' : 'bg-[#1C1C1E] border border-[#C5A059]/20 shadow-sm'} font-extrabold` 
+                : `${isLightMode ? 'hover:bg-white/50 hover:text-stone-800' : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'}`
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -973,8 +993,8 @@ export default function Sidebar({
             onClick={() => setActiveTab('calls')}
             className={`flex-1 min-w-[65px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
               activeTab === 'calls' 
-                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
-                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+                ? `text-[#C5A059] ${isLightMode ? 'bg-white shadow-xs border border-stone-200' : 'bg-[#1C1C1E] border border-[#C5A059]/20 shadow-sm'} font-extrabold` 
+                : `${isLightMode ? 'hover:bg-white/50 hover:text-stone-800' : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'}`
             }`}
           >
             <Phone className="w-3.5 h-3.5" />
@@ -986,8 +1006,8 @@ export default function Sidebar({
             onClick={() => setActiveTab('contacts')}
             className={`flex-1 min-w-[65px] py-2.5 text-center transition-all duration-300 relative flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
               activeTab === 'contacts' 
-                ? 'text-[#C5A059] bg-[#1C1C1E] shadow-sm font-extrabold border border-[#C5A059]/20' 
-                : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'
+                ? `text-[#C5A059] ${isLightMode ? 'bg-white shadow-xs border border-stone-200' : 'bg-[#1C1C1E] border border-[#C5A059]/20 shadow-sm'} font-extrabold` 
+                : `${isLightMode ? 'hover:bg-white/50 hover:text-stone-800' : 'hover:bg-[#1C1C1E]/30 hover:text-stone-200'}`
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -997,11 +1017,11 @@ export default function Sidebar({
       </div>
 
       {/* Dynamic List Content */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0D0D0C]">
+      <div className={`flex-1 overflow-y-auto custom-scrollbar ${isLightMode ? 'bg-white' : 'bg-[#0D0D0C]'}`}>
         {activeTab === 'chats' && (
           <div>
             {/* Create Group Prominent Button */}
-            <div className="p-3 bg-[#121211]/55 border-b border-[#2E2E2A]/40 flex items-center justify-between">
+            <div className={`p-3 ${isLightMode ? 'bg-stone-50 border-b border-stone-150' : 'bg-[#121211]/55 border-b border-[#2E2E2A]/40'} flex items-center justify-between`}>
               <span className="text-[10px] text-stone-400 font-bold">المحادثات المفتوحة</span>
               <button
                 onClick={() => {
@@ -1031,8 +1051,12 @@ export default function Sidebar({
                       key={contact.id}
                       id={`chat_item_${contact.id}`}
                       onClick={() => onSelectContact(contact)}
-                      className={`p-3.5 flex items-center justify-between cursor-pointer transition relative border-b border-[#2E2E2A]/30 ${
-                        isSelected ? 'bg-[#1C1C1A] border-r-4 border-[#C5A059]' : 'hover:bg-[#121211]/55'
+                      className={`p-3.5 flex items-center justify-between cursor-pointer transition relative border-b ${
+                        isLightMode ? 'border-stone-100' : 'border-[#2E2E2A]/30'
+                      } ${
+                        isSelected 
+                          ? `${isLightMode ? 'bg-[#C5A059]/10' : 'bg-[#1C1C1A]'} border-r-4 border-[#C5A059]` 
+                          : `${isLightMode ? 'hover:bg-stone-50' : 'hover:bg-[#121211]/55'}`
                       } ${contact.visibility === 'hidden' ? 'bg-amber-950/20 border-l-2 border-dashed border-amber-600' : ''}`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
@@ -1046,7 +1070,7 @@ export default function Sidebar({
                           )}
                         </div>
                         <div className="text-right overflow-hidden">
-                          <h3 className="font-bold text-sm text-white flex items-center gap-1 truncate">
+                          <h3 className={`font-bold text-sm ${isLightMode ? 'text-stone-800' : 'text-white'} flex items-center gap-1 truncate`}>
                             {contact.name}
                             {contact.isGroup && (
                               <span className="text-[9px] bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30 px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
@@ -1062,7 +1086,7 @@ export default function Sidebar({
                               </span>
                             )}
                           </h3>
-                          <p className="text-xs text-stone-400 truncate mt-0.5 max-w-[190px]">
+                          <p className={`text-xs ${isLightMode ? 'text-stone-500' : 'text-stone-400'} truncate mt-0.5 max-w-[190px]`}>
                             {contact.status === 'typing' ? (
                               <span className="text-[#C5A059] font-bold animate-pulse">يكتب الآن...</span>
                             ) : (
@@ -1656,6 +1680,35 @@ export default function Sidebar({
                       <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                     </svg>
                   </div>
+                </div>
+              </div>
+
+              {/* Light & Dark Mode Toggle */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-[#556B2F] border-b border-[#E5E1D8] pb-1">🌓 وضع المظهر (Theme Mode):</h4>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditThemeMode('dark')}
+                    className={`flex-1 py-2.5 text-xs font-black rounded-xl border transition flex items-center justify-center gap-2 ${
+                      editThemeMode === 'dark'
+                        ? 'bg-[#1C1C1E] border-stone-800 text-amber-400 font-extrabold ring-1 ring-amber-400/50 shadow-md'
+                        : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
+                    }`}
+                  >
+                    <span>🌙 الوضع الداكن (Dark)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditThemeMode('light')}
+                    className={`flex-1 py-2.5 text-xs font-black rounded-xl border transition flex items-center justify-center gap-2 ${
+                      editThemeMode === 'light'
+                        ? 'bg-amber-50/70 border-amber-200 text-amber-800 font-extrabold ring-1 ring-amber-500/50 shadow-sm'
+                        : 'border-[#E5E1D8] bg-[#F4F2EE] hover:bg-[#E5E1D8]/40 text-[#2D2D2D]'
+                    }`}
+                  >
+                    <span>☀️ الوضع الفاتح (Light)</span>
+                  </button>
                 </div>
               </div>
 

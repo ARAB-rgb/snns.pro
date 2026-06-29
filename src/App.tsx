@@ -70,7 +70,8 @@ export default function App() {
     const saved = localStorage.getItem('currentUser_profile');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return { themeMode: 'dark', ...parsed };
       } catch (e) {
         // Fallback
       }
@@ -86,7 +87,8 @@ export default function App() {
       googleEmail: '',
       status: 'offline' as 'online' | 'offline' | 'away',
       role: '',
-      language: ''
+      language: '',
+      themeMode: 'dark'
     };
   });
 
@@ -970,9 +972,12 @@ export default function App() {
   // Firestore Data Manipulation Helper handlers
   const handleUpdateCurrentUser = async (updated: any) => {
     try {
-      await setDoc(doc(db, 'users', 'main_profile'), updated);
+      setCurrentUser(updated);
+      localStorage.setItem('currentUser_profile', JSON.stringify(updated));
+      const targetId = updated.id || currentUser.id || 'main_profile';
+      await setDoc(doc(db, 'users', targetId), updated);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'users/main_profile');
+      handleFirestoreError(error, OperationType.WRITE, `users/${currentUser.id || 'main_profile'}`);
     }
   };
 

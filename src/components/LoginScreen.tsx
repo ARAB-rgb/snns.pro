@@ -392,205 +392,284 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   return (
-    <div id="login_screen_container" className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl font-sans p-4 select-none">
-      <div className="bg-[#0D0D0C] rounded-[32px] shadow-[0_0_50px_rgba(197,160,89,0.15)] w-full max-w-md overflow-hidden border border-[#2E2E2A]/60 flex flex-col transition-all">
-        {/* Luxury Banner Section */}
-        <div className="bg-gradient-to-b from-[#1C1C1A] to-[#0A0A09] p-8 text-white text-center relative border-b border-[#2E2E2A]/40 flex flex-col items-center">
-          <div className="absolute top-4 right-4 bg-[#C5A059]/10 border border-[#C5A059]/30 text-[#C5A059] px-3 py-1 rounded-full text-[10px] font-mono tracking-widest font-extrabold uppercase">
-            V1.2 PRO
-          </div>
-          
-          {/* Logo */}
-          <div className="mb-4 mt-2">
+    <div id="login_screen_container" className="fixed inset-0 z-50 overflow-y-auto bg-[#070707] font-sans select-none pb-12 scrollbar-thin scrollbar-thumb-stone-800">
+      <div className="min-h-full w-full flex flex-col items-center py-10 px-4 space-y-10">
+        
+        {/* Header/Introduction Landing section */}
+        <div className="text-center max-w-2xl space-y-4" dir="rtl">
+          <div className="flex justify-center mb-2">
             <BrandLogo size="lg" showText={true} />
           </div>
-
-          <p className="text-[11px] text-[#A89F91] max-w-xs mt-2 leading-relaxed">
-            البوابة الآمنة والمشفرة لربط الاتصالات وإدارة الرقابة والبلاغات
+          
+          <h1 className="text-xl sm:text-2xl font-black text-[#C5A059] tracking-tight">منصة الاتصالات والحلول التقنية المتكاملة</h1>
+          
+          <p className="text-xs sm:text-sm text-stone-300 leading-relaxed max-w-xl mx-auto px-2">
+            SNNS.PRO منصة اتصالات آمنة تتيح للمستخدمين إنشاء حسابات، إجراء محادثات خاصة، مكالمات صوتية ومرئية، مشاركة الملفات، وإدارة جهات الاتصال باستخدام تسجيل الدخول عبر Google أو البريد الإلكتروني، مع التركيز على الخصوصية والأمان.
           </p>
         </div>
 
-        {/* Tab Toggle */}
-        <div className="flex border-b border-[#2E2E2A]/40 bg-[#121211]">
-          <button
-            type="button"
-            className={`flex-1 py-4 text-center text-xs font-black tracking-wider transition-all border-b-2 ${
-              activeTab === 'user'
-                ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/5 font-black'
-                : 'border-transparent text-stone-500 hover:text-stone-300'
-            }`}
-            onClick={() => {
-              setActiveTab('user');
-              setError(null);
-              setSuccess(null);
-            }}
-          >
-            بوابة المستخدمين والعملاء
-          </button>
-          <button
-            type="button"
-            className={`flex-1 py-4 text-center text-xs font-black tracking-wider transition-all border-b-2 ${
-              activeTab === 'admin'
-                ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/5 font-black'
-                : 'border-transparent text-stone-500 hover:text-stone-300'
-            }`}
-            onClick={() => {
-              setActiveTab('admin');
-              setError(null);
-              setSuccess(null);
-            }}
-          >
-            بوابة المشرفين والمراقبين
-          </button>
-        </div>
-
-        {/* Form Container */}
-        <div className="p-6 flex-1 space-y-4">
-          {error && (
-            <div className="p-3.5 bg-rose-950/40 border-r-4 border-rose-500 rounded-2xl text-rose-200 text-xs flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
-              <span>{error}</span>
+        {/* Authentication Card */}
+        <div className="bg-[#0D0D0C] rounded-[32px] shadow-[0_0_50px_rgba(197,160,89,0.15)] w-full max-w-md overflow-hidden border border-[#2E2E2A]/60 flex flex-col transition-all">
+          {/* Luxury Banner Section */}
+          <div className="bg-gradient-to-b from-[#1C1C1A] to-[#0A0A09] p-8 text-white text-center relative border-b border-[#2E2E2A]/40 flex flex-col items-center">
+            <div className="absolute top-4 right-4 bg-[#C5A059]/10 border border-[#C5A059]/30 text-[#C5A059] px-3 py-1 rounded-full text-[10px] font-mono tracking-widest font-extrabold uppercase">
+              V1.2 PRO
             </div>
-          )}
-
-          {success && (
-            <div className="p-3.5 bg-emerald-950/40 border-r-4 border-emerald-500 rounded-2xl text-emerald-200 text-xs flex items-start gap-2.5">
-              <Shield className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
-              <span>{success}</span>
-            </div>
-          )}
-
-          {activeTab === 'user' ? (
-            <div className="space-y-5 py-2 text-center">
-              <div className="p-4 bg-[#1C1C1A] border border-[#2E2E2A]/70 rounded-2xl text-stone-300 text-xs leading-relaxed text-right">
-                <span className="font-extrabold text-[#C5A059] block mb-1.5 flex items-center gap-1">
-                  🔐 دخول مشفر وموثق عبر Google:
-                </span>
-                لحماية خصوصية المحادثات وضمان بيئة تواصل آمنة خالية من السلوكيات المسيئة، تم تخصيص الدخول عبر حساب Google الموثق فقط.
-              </div>
-
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-[#A8894A] via-[#C5A059] to-[#E6C15C] hover:brightness-115 active:brightness-95 text-[#0D0D0C] font-black rounded-2xl shadow-[0_4px_15px_rgba(197,160,89,0.3)] hover:shadow-[0_4px_25px_rgba(197,160,89,0.45)] transition-all flex items-center justify-center gap-3 text-xs cursor-pointer disabled:opacity-50"
-              >
-                {loading ? (
-                  <span className="animate-pulse">جاري الاتصال الآمن بـ Google...</span>
-                ) : (
-                  <>
-                    <Chrome className="w-4 h-4 text-stone-950 stroke-[3]" />
-                    <span>تسجيل الدخول الفوري بـ Google</span>
-                  </>
-                )}
-              </button>
-
-              <p className="text-[10px] text-stone-500">
-                جميع الاتصالات مشفرة وفق بروتوكولات حماية الهوية الخاصة بـ SNNS.PRO
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleAdminAuth} className="space-y-4">
-              <div className="p-4 bg-[#1C1C1A] border border-[#2E2E2A]/70 rounded-2xl text-stone-300 text-xs text-right leading-relaxed">
-                <span className="font-bold text-[#C5A059] block mb-1 flex items-center gap-1">
-                  🛡️ تسجيل دخول المشرفين المعتمدين:
-                </span>
-                يتطلب إدخال المعرف الرقمي الخاص بك. أي محاولة ولوج غير مصرح بها يتم تسجيلها فوراً للتحقيق الجنائي الرقمي.
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[11px] font-extrabold text-[#A89F91] text-right">المعرف الرقمي للمشرف (ID)</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500">
-                    <Shield className="w-4 h-4 text-[#C5A059]" />
-                  </span>
-                  <input
-                    type="text"
-                    dir="ltr"
-                    className="w-full pr-11 pl-4 py-3 rounded-xl border border-[#2E2E2A] bg-[#121211] focus:bg-[#1C1C1A] focus:ring-1 focus:ring-[#C5A059] text-white focus:border-[#C5A059] outline-none transition-all text-xs text-left font-mono font-bold"
-                    placeholder="e.g. 1007363904"
-                    value={adminUsername}
-                    onChange={(e) => setAdminUsername(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[11px] font-extrabold text-[#A89F91] text-right">رمز المرور السري المشفر</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500">
-                    <Lock className="w-4 h-4 text-[#C5A059]" />
-                  </span>
-                  <input
-                    type="password"
-                    dir="ltr"
-                    className="w-full pr-11 pl-4 py-3 rounded-xl border border-[#2E2E2A] bg-[#121211] focus:bg-[#1C1C1A] focus:ring-1 focus:ring-[#C5A059] text-white focus:border-[#C5A059] outline-none transition-all text-xs text-left font-mono font-bold"
-                    placeholder="••••••••"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 bg-gradient-to-r from-[#8A6E35] to-[#C5A059] hover:brightness-110 text-white font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs cursor-pointer disabled:opacity-50 mt-2"
-              >
-                {loading ? (
-                  <span className="animate-pulse">جاري مراجعة الهوية والتفويض...</span>
-                ) : (
-                  <>
-                    <Shield className="w-4 h-4" />
-                    <span>تسجيل الدخول المشفر للمشرف</span>
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Guest Bypass Link */}
-          <div className="relative my-4 flex items-center">
-            <div className="flex-grow border-t border-[#2E2E2A]/40"></div>
-            <span className="flex-shrink mx-3 text-stone-600 text-[11px] font-bold">أو للتحقق والمشاهدة</span>
-            <div className="flex-grow border-t border-[#2E2E2A]/40"></div>
+            
+            <p className="text-xs font-bold text-[#C5A059] tracking-wider uppercase mb-1">SNNS.PRO AUTHENTICATION</p>
+            <h2 className="text-sm font-extrabold text-stone-200">بوابة تسجيل الدخول الآمن والموحد</h2>
           </div>
 
-          <button
-            type="button"
-            onClick={handleGuestBypass}
-            className="w-full py-3 border border-[#2E2E2A] hover:bg-[#1C1C1A]/50 text-[#C5A059] hover:text-[#E6C15C] font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-xs cursor-pointer bg-transparent"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>تخطي تجريبي سريع (دخول فوري كضيف)</span>
-          </button>
+          {/* Tab Toggle */}
+          <div className="flex border-b border-[#2E2E2A]/40 bg-[#121211]">
+            <button
+              type="button"
+              className={`flex-1 py-4 text-center text-xs font-black tracking-wider transition-all border-b-2 ${
+                activeTab === 'user'
+                  ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/5 font-black'
+                  : 'border-transparent text-stone-500 hover:text-stone-300'
+              }`}
+              onClick={() => {
+                setActiveTab('user');
+                setError(null);
+                setSuccess(null);
+              }}
+            >
+              بوابة المستخدمين والعملاء
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-4 text-center text-xs font-black tracking-wider transition-all border-b-2 ${
+                activeTab === 'admin'
+                  ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/5 font-black'
+                  : 'border-transparent text-stone-500 hover:text-stone-300'
+              }`}
+              onClick={() => {
+                setActiveTab('admin');
+                setError(null);
+                setSuccess(null);
+              }}
+            >
+              بوابة المشرفين والمراقبين
+            </button>
+          </div>
 
-          {/* Footer compliance links */}
-          <div className="pt-4 border-t border-[#2E2E2A]/50 text-center space-y-2.5 mt-2">
-            <div className="flex items-center justify-center gap-4 text-[11px] font-semibold text-[#A89F91]">
-              <a 
-                href="https://snns.pro/privacy" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="hover:text-[#C5A059] transition flex items-center gap-1"
-              >
-                <span>سياسة الخصوصية</span>
-              </a>
-              <span className="text-stone-700">•</span>
-              <a 
-                href="https://snns.pro/terms" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="hover:text-[#C5A059] transition flex items-center gap-1"
-              >
-                <span>شروط الاستخدام والخدمة</span>
-              </a>
+          {/* Form Container */}
+          <div className="p-6 flex-1 space-y-4">
+            {error && (
+              <div className="p-3.5 bg-rose-950/40 border-r-4 border-rose-500 rounded-2xl text-rose-200 text-xs flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {success && (
+              <div className="p-3.5 bg-emerald-950/40 border-r-4 border-emerald-500 rounded-2xl text-emerald-200 text-xs flex items-start gap-2.5">
+                <Shield className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                <span>{success}</span>
+              </div>
+            )}
+
+            {activeTab === 'user' ? (
+              <div className="space-y-5 py-2 text-center">
+                <div className="p-4 bg-[#1C1C1A] border border-[#2E2E2A]/70 rounded-2xl text-stone-300 text-xs leading-relaxed text-right">
+                  <span className="font-extrabold text-[#C5A059] block mb-1.5 flex items-center gap-1">
+                    🔐 دخول مشفر وموثق عبر Google:
+                  </span>
+                  لحماية خصوصية المحادثات وضمان بيئة تواصل آمنة خالية من السلوكيات المسيئة، تم تخصيص الدخول عبر حساب Google الموثق فقط.
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full py-4 bg-gradient-to-r from-[#A8894A] via-[#C5A059] to-[#E6C15C] hover:brightness-115 active:brightness-95 text-[#0D0D0C] font-black rounded-2xl shadow-[0_4px_15px_rgba(197,160,89,0.3)] hover:shadow-[0_4px_25px_rgba(197,160,89,0.45)] transition-all flex items-center justify-center gap-3 text-xs cursor-pointer disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="animate-pulse">جاري الاتصال الآمن بـ Google...</span>
+                  ) : (
+                    <>
+                      <Chrome className="w-4 h-4 text-stone-950 stroke-[3]" />
+                      <span>تسجيل الدخول الفوري بـ Google</span>
+                    </>
+                  )}
+                </button>
+
+                <p className="text-[10px] text-stone-500">
+                  جميع الاتصالات مشفرة وفق بروتوكولات حماية الهوية الخاصة بـ SNNS.PRO
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleAdminAuth} className="space-y-4">
+                <div className="p-4 bg-[#1C1C1A] border border-[#2E2E2A]/70 rounded-2xl text-stone-300 text-xs text-right leading-relaxed">
+                  <span className="font-bold text-[#C5A059] block mb-1 flex items-center gap-1">
+                    🛡️ تسجيل دخول المشرفين المعتمدين:
+                  </span>
+                  يتطلب إدخال المعرف الرقمي الخاص بك. أي محاولة ولوج غير مصرح بها يتم تسجيلها فوراً للتحقيق الجنائي الرقمي.
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-extrabold text-[#A89F91] text-right">المعرف الرقمي للمشرف (ID)</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500">
+                      <Shield className="w-4 h-4 text-[#C5A059]" />
+                    </span>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      className="w-full pr-11 pl-4 py-3 rounded-xl border border-[#2E2E2A] bg-[#121211] focus:bg-[#1C1C1A] focus:ring-1 focus:ring-[#C5A059] text-white focus:border-[#C5A059] outline-none transition-all text-xs text-left font-mono font-bold"
+                      placeholder="e.g. 1007363904"
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-extrabold text-[#A89F91] text-right">رمز المرور السري المشفر</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-stone-500">
+                      <Lock className="w-4 h-4 text-[#C5A059]" />
+                    </span>
+                    <input
+                      type="password"
+                      dir="ltr"
+                      className="w-full pr-11 pl-4 py-3 rounded-xl border border-[#2E2E2A] bg-[#121211] focus:bg-[#1C1C1A] focus:ring-1 focus:ring-[#C5A059] text-white focus:border-[#C5A059] outline-none transition-all text-xs text-left font-mono font-bold"
+                      placeholder="••••••••"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 bg-gradient-to-r from-[#8A6E35] to-[#C5A059] hover:brightness-110 text-white font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs cursor-pointer disabled:opacity-50 mt-2"
+                >
+                  {loading ? (
+                    <span className="animate-pulse">جاري مراجعة الهوية والتفويض...</span>
+                  ) : (
+                    <>
+                      <Shield className="w-4 h-4" />
+                      <span>تسجيل الدخول المشفر للمشرف</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Guest Bypass Link */}
+            <div className="relative my-4 flex items-center">
+              <div className="flex-grow border-t border-[#2E2E2A]/40"></div>
+              <span className="flex-shrink mx-3 text-stone-600 text-[11px] font-bold">أو للتحقق والمشاهدة</span>
+              <div className="flex-grow border-t border-[#2E2E2A]/40"></div>
             </div>
-            <p className="text-[10px] text-stone-600">
-              جميع الحقوق محفوظة © {new Date().getFullYear()} SNNS.PRO
+
+            <button
+              type="button"
+              onClick={handleGuestBypass}
+              className="w-full py-3 border border-[#2E2E2A] hover:bg-[#1C1C1A]/50 text-[#C5A059] hover:text-[#E6C15C] font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-xs cursor-pointer bg-transparent"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>تخطي تجريبي سريع (دخول فوري كضيف)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Explanation Section */}
+        <div className="w-full max-w-2xl bg-[#0B0B0A] rounded-[24px] border border-[#2E2E2A]/50 p-6 sm:p-8 space-y-6 animate-fadeIn" dir="rtl">
+          <div className="text-center space-y-1">
+            <h3 className="text-base sm:text-lg font-black text-[#C5A059]">ما هو SNNS.PRO؟</h3>
+            <p className="text-[11px] text-stone-400">نظام ذكي متكامل للمراسلات الآمنة ومراقبة جودة المحتوى</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="bg-[#121211] p-4 rounded-2xl border border-[#2E2E2A]/30 text-center space-y-2 hover:border-[#C5A059]/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center mx-auto text-sm">💬</div>
+              <h4 className="text-xs font-extrabold text-stone-200">دردشة خاصة</h4>
+              <p className="text-[10px] text-stone-500 leading-relaxed">مراسلات فورية مشفرة بالكامل بين الأطراف لخصوصية مطلقة.</p>
+            </div>
+
+            <div className="bg-[#121211] p-4 rounded-2xl border border-[#2E2E2A]/30 text-center space-y-2 hover:border-[#C5A059]/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center mx-auto text-sm">📞</div>
+              <h4 className="text-xs font-extrabold text-stone-200">مكالمات صوتية</h4>
+              <p className="text-[10px] text-stone-500 leading-relaxed">اتصالات صوتية عالية النقاوة بتقنيات الويب الحديثة الآمنة.</p>
+            </div>
+
+            <div className="bg-[#121211] p-4 rounded-2xl border border-[#2E2E2A]/30 text-center space-y-2 hover:border-[#C5A059]/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center mx-auto text-sm">📹</div>
+              <h4 className="text-xs font-extrabold text-stone-200">مكالمات فيديو</h4>
+              <p className="text-[10px] text-stone-500 leading-relaxed">مكالمات مرئية فائقة الجودة لربط أسرع مع جهات اتصالك.</p>
+            </div>
+
+            <div className="bg-[#121211] p-4 rounded-2xl border border-[#2E2E2A]/30 text-center space-y-2 hover:border-[#C5A059]/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center mx-auto text-sm">📡</div>
+              <h4 className="text-xs font-extrabold text-stone-200">بث مباشر</h4>
+              <p className="text-[10px] text-stone-500 leading-relaxed">إمكانية إنشاء ومتابعة بث مباشر غني مع التفاعل اللحظي.</p>
+            </div>
+
+            <div className="bg-[#121211] p-4 rounded-2xl border border-[#2E2E2A]/30 text-center space-y-2 hover:border-[#C5A059]/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center mx-auto text-sm">📁</div>
+              <h4 className="text-xs font-extrabold text-stone-200">مشاركة ملفات</h4>
+              <p className="text-[10px] text-stone-500 leading-relaxed">إرسال واستقبال المستندات والوسائط والملفات الكبيرة بأمان.</p>
+            </div>
+
+            <div className="bg-[#121211] p-4 rounded-2xl border border-[#2E2E2A]/30 text-center space-y-2 hover:border-[#C5A059]/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center mx-auto text-sm">🛡️</div>
+              <h4 className="text-xs font-extrabold text-stone-200">تشفير وحماية</h4>
+              <p className="text-[10px] text-stone-500 leading-relaxed">حماية الهوية ونظام معالجة الشكاوى الأوتوماتيكي المعزز بالذكاء الاصطناعي.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="w-full max-w-2xl border-t border-[#2E2E2A]/40 pt-6 text-center space-y-4" dir="rtl">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-extrabold text-stone-400">
+            <a 
+              href="https://snns.pro/privacy" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-[#C5A059] transition flex items-center gap-1"
+            >
+              <span>سياسة الخصوصية</span>
+            </a>
+            <span className="text-stone-800 hidden sm:inline">•</span>
+            <a 
+              href="https://snns.pro/terms" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-[#C5A059] transition flex items-center gap-1"
+            >
+              <span>شروط الاستخدام</span>
+            </a>
+            <span className="text-stone-800 hidden sm:inline">•</span>
+            <a 
+              href="https://snns.pro/contact" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-[#C5A059] transition flex items-center gap-1"
+            >
+              <span>تواصل معنا</span>
+            </a>
+            <span className="text-stone-800 hidden sm:inline">•</span>
+            <a 
+              href="mailto:support@snns.pro" 
+              className="hover:text-[#C5A059] transition flex items-center gap-1 text-[11px] font-bold"
+            >
+              <span>البريد الإلكتروني للدعم: support@snns.pro</span>
+            </a>
+          </div>
+          
+          <div className="space-y-1">
+            <p className="text-[10px] text-stone-600 font-medium leading-relaxed max-w-lg mx-auto">
+              تطبيق SNNS.PRO مرخص ومنظم لتأمين قنوات الاتصالات التفاعلية ومكافحة الانتهاكات الرقمية.
+            </p>
+            <p className="text-[11px] text-[#A89F91] font-black">
+              © 2026 SNNS.PRO. جميع الحقوق محفوظة.
             </p>
           </div>
-        </div>
+        </footer>
       </div>
 
       {/* Google Contacts Import Consent Prompt Modal */}

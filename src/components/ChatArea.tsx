@@ -77,6 +77,7 @@ interface ChatAreaProps {
     email: string;
     role: string;
     language?: string;
+    themeMode?: 'dark' | 'light';
   };
   reminders?: MessageReminder[];
   onAddReminder?: (reminder: MessageReminder) => void;
@@ -90,11 +91,11 @@ export interface WallpaperOption {
 }
 
 export const WALLPAPERS: WallpaperOption[] = [
-  { id: 'olive', name: 'الحديقة الزيتونية', className: "bg-[url('https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=1200')] bg-cover bg-blend-overlay bg-[#FAF9F6]/95" },
-  { id: 'beige', name: 'البيج الكلاسيكي', className: "bg-[url('https://images.unsplash.com/photo-1505691938895-1758d7feb511?q=80&w=1200')] bg-cover bg-blend-overlay bg-[#FAF9F6]/93" },
-  { id: 'lavender', name: 'ضباب الخزامى', className: "bg-[url('https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?q=80&w=1200')] bg-cover bg-blend-overlay bg-[#F5F2F9]/95" },
-  { id: 'cosmic', name: 'الغبار الكوني', className: "bg-[url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200')] bg-cover bg-blend-overlay bg-[#FAF9F6]/90" },
-  { id: 'slate', name: 'رمادي هادئ', className: "bg-[#E5E1D8]/20" }
+  { id: 'olive', name: 'أخضر زيتوني هادئ (Sage)', className: "bg-[#E3EBE4] dark:bg-[#111A13]" },
+  { id: 'beige', name: 'بيج كلاسيكي دافئ (Beige)', className: "bg-[#EFEAE2] dark:bg-[#141210]" },
+  { id: 'lavender', name: 'خزامى ناعم هادئ (Lavender)', className: "bg-[#EBEAF2] dark:bg-[#14111A]" },
+  { id: 'cosmic', name: 'أزرق سماوي داكن (Cosmic)', className: "bg-[#E3E8EC] dark:bg-[#0B141A]" },
+  { id: 'slate', name: 'رمادي ملكي بسيط (Slate)', className: "bg-[#F2F0EA] dark:bg-[#0E0E0D]" }
 ];
 
 const EMOJI_LIST = ['😀', '😂', '🤣', '👍', '🙏', '❤️', '🔥', '🎉', '💡', '🌹', '💻', '🚗', '🤔', '👀', '👌', '🤝'];
@@ -750,11 +751,13 @@ export default function ChatArea({
     }
   };
 
+  const isLightMode = currentUser.themeMode === 'light';
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0A0A09] text-white select-none relative" dir="rtl">
+    <div className={`flex-1 flex flex-col h-full ${isLightMode ? 'bg-[#FAF9F6] text-stone-800' : 'bg-[#0A0A09] text-white'} select-none relative`} dir="rtl">
       
       {/* Top Header Active Chat Info - Luxury gold style */}
-      <div className="p-4 bg-[#0D0D0C] border-b border-[#2E2E2A]/70 flex items-center justify-between z-10 shadow-lg">
+      <div className={`p-4 ${isLightMode ? 'bg-[#F2F0E9] border-b border-[#E5E1D8]' : 'bg-[#0D0D0C] border-b border-[#2E2E2A]/70'} flex items-center justify-between z-10 shadow-lg`}>
         <div className="flex items-center gap-3">
           {/* Back button for mobile view */}
           <button 
@@ -778,7 +781,7 @@ export default function ChatArea({
           </div>
 
           <div className="text-right">
-            <h3 className="font-extrabold text-sm text-white flex items-center gap-1.5 flex-wrap">
+            <h3 className={`font-extrabold text-sm ${isLightMode ? 'text-stone-850' : 'text-white'} flex items-center gap-1.5 flex-wrap`}>
               {activeContact.name}
               {activeContact.id.startsWith('google_') && (
                 <span className="text-[9px] bg-blue-950/50 text-blue-400 border border-blue-800/40 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="مستورد من Google">
@@ -787,7 +790,7 @@ export default function ChatArea({
               )}
               <span className="text-[10px] text-[#C5A059] bg-[#C5A059]/10 border border-[#C5A059]/30 px-2 py-0.5 rounded-full font-black">{activeContact.bio?.split('|')[0]}</span>
             </h3>
-            <p className="text-[11px] text-stone-400">
+            <p className={`text-[11px] ${isLightMode ? 'text-stone-500' : 'text-stone-400'}`}>
               {activeContact.status === 'typing' ? (
                 <span className="text-[#C5A059] font-bold animate-pulse">يكتب الآن...</span>
               ) : (
@@ -798,35 +801,50 @@ export default function ChatArea({
         </div>
 
         {/* Action icons like Teams and Imo for Video calls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Video Call */}
           <button
             onClick={() => onStartCall(activeContact, 'video')}
-            className="px-4 py-2.5 hover:bg-[#C5A059]/20 text-[#C5A059] hover:text-[#E6C15C] rounded-full border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all duration-300 shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
-            title="اتصال مرئي تيمز / إيمو"
+            className={`p-2.5 rounded-full border transition-all duration-300 cursor-pointer active:scale-95 shadow-sm flex items-center justify-center ${
+              isLightMode
+                ? 'hover:bg-stone-200 border-stone-200 bg-white text-[#C5A059]'
+                : 'hover:bg-[#1C1C1A] border-[#2E2E2A]/70 bg-[#121211] text-[#C5A059]'
+            }`}
+            title="مكالمة فيديو"
           >
             <Video className="w-4 h-4 text-[#C5A059]" />
-            <span className="text-xs font-black hidden sm:inline text-[#C5A059]">مكالمة فيديو</span>
           </button>
+
+          {/* Audio Call */}
           <button
             onClick={() => onStartCall(activeContact, 'audio')}
-            className="px-4 py-2.5 hover:bg-[#C5A059]/20 text-[#C5A059]/90 hover:text-[#E6C15C] rounded-full border border-[#C5A059]/30 bg-[#C5A059]/5 transition-all duration-300 shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
-            title="اتصال صوتي واتساب"
+            className={`p-2.5 rounded-full border transition-all duration-300 cursor-pointer active:scale-95 shadow-sm flex items-center justify-center ${
+              isLightMode
+                ? 'hover:bg-stone-200 border-stone-200 bg-white text-[#C5A059]'
+                : 'hover:bg-[#1C1C1A] border-[#2E2E2A]/70 bg-[#121211] text-[#C5A059]'
+            }`}
+            title="مكالمة صوتية"
           >
             <Phone className="w-4 h-4 text-[#C5A059]" />
-            <span className="text-xs font-black hidden sm:inline text-[#C5A059]">صوتية</span>
           </button>
+
+          {/* Wallpaper picker */}
           <div className="relative">
             <button 
               onClick={() => setShowWallpaperMenu(!showWallpaperMenu)}
-              className="px-4 py-2.5 hover:bg-[#1C1C1A] rounded-full text-stone-300 transition-all duration-300 flex items-center gap-1.5 border border-[#2E2E2A]/70 bg-[#121211] shadow-md cursor-pointer active:scale-95"
+              className={`p-2.5 rounded-full border transition-all duration-300 cursor-pointer active:scale-95 shadow-sm flex items-center justify-center ${
+                isLightMode
+                  ? 'hover:bg-stone-200 border-stone-200 bg-white text-stone-600'
+                  : 'hover:bg-[#1C1C1A] border-[#2E2E2A]/70 bg-[#121211] text-stone-300'
+              }`}
               title="تغيير خلفية الدردشة"
             >
-              🎨 <span className="text-xs font-black hidden md:inline text-stone-300">الخلفيات</span>
+              <span className="text-xs">🎨</span>
             </button>
             
             {showWallpaperMenu && (
-              <div className="absolute left-0 mt-2 w-48 bg-[#0D0D0C] border border-[#2E2E2A] rounded-2xl shadow-2xl z-50 p-2 text-right animate-fadeIn">
-                <p className="text-[11px] font-black text-[#A89F91] px-2.5 py-1.5 border-b border-[#2E2E2A]/60 mb-1">اختر خلفية للدردشة</p>
+              <div className={`absolute left-0 mt-2 w-48 ${isLightMode ? 'bg-white border-[#E5E1D8]' : 'bg-[#0D0D0C] border-[#2E2E2A]'} border rounded-2xl shadow-2xl z-50 p-2 text-right animate-fadeIn`}>
+                <p className={`text-[11px] font-black ${isLightMode ? 'text-stone-500 border-stone-150' : 'text-[#A89F91] border-[#2E2E2A]/60'} px-2.5 py-1.5 border-b mb-1`}>اختر خلفية للدردشة</p>
                 {WALLPAPERS.map((wp) => (
                   <button
                     key={wp.id}
@@ -836,7 +854,9 @@ export default function ChatArea({
                       setShowWallpaperMenu(false);
                     }}
                     className={`w-full text-right px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                      chatWallpaper === wp.id ? 'bg-[#C5A059]/15 text-[#C5A059] font-black' : 'hover:bg-[#1C1C1A] text-stone-300'
+                      chatWallpaper === wp.id 
+                        ? 'bg-[#C5A059]/15 text-[#C5A059] font-black' 
+                        : `${isLightMode ? 'hover:bg-stone-50 text-stone-700' : 'hover:bg-[#1C1C1A] text-stone-300'}`
                     }`}
                   >
                     <span>{wp.name}</span>
@@ -850,11 +870,14 @@ export default function ChatArea({
           {/* Submit Complaint Button */}
           <button
             onClick={() => setShowComplaintModal(true)}
-            className="px-4 py-2.5 hover:bg-rose-900/30 rounded-full text-rose-500 hover:text-rose-400 transition-all duration-300 flex items-center gap-1.5 border border-rose-900/40 bg-rose-950/10 shadow-sm cursor-pointer animate-pulse active:scale-95"
+            className={`p-2.5 rounded-full border transition-all duration-300 cursor-pointer active:scale-95 shadow-sm flex items-center justify-center ${
+              isLightMode
+                ? 'hover:bg-rose-50 border-rose-200 bg-white text-rose-500'
+                : 'hover:bg-rose-950/20 border-rose-900/40 bg-[#121211] text-rose-500'
+            }`}
             title="تقديم شكوى أو بلاغ عن محتوى مسيء"
           >
             <AlertTriangle className="w-4 h-4 text-rose-500" />
-            <span className="text-xs font-bold hidden md:inline">تقديم بلاغ 🛡️</span>
           </button>
         </div>
       </div>
@@ -864,18 +887,16 @@ export default function ChatArea({
         (WALLPAPERS.find(wp => wp.id === chatWallpaper) || WALLPAPERS[0]).className
       }`}>
         
-        {isRealMode && (
-          <div className="flex justify-center select-none animate-fadeIn mb-2">
-            <span className="text-[10px] font-black text-[#C5A059] bg-[#C5A059]/10 px-4 py-1.5 rounded-full shadow-md border border-[#C5A059]/30 flex items-center gap-1.5 animate-pulse">
-              🌐 اتصال حقيقي مباشر (رقم الغرفة: {roomId})
-            </span>
-          </div>
-        )}
-
-        {/* Info banner */}
-        <div className="flex justify-center select-none">
-          <span className="text-[10px] font-extrabold tracking-wider text-[#C5A059] bg-[#121211] px-3 py-1 rounded-full border border-[#2E2E2A]/70 shadow-md flex items-center gap-1">
-            {isRealMode ? '⚡ الربط المباشر نشط (تبادل فوري للبيانات والصوت والفيديو)' : '🔒 تشفير متكامل من طرف لطرف (محاكاة واتساب الآمنة)'}
+        {/* Unobtrusive, calm Encryption & Connection status banner */}
+        <div className="flex justify-center select-none my-2">
+          <span className={`text-[10.5px] font-medium px-4 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-sm text-center ${
+            isLightMode 
+              ? 'bg-[#E5E1D8]/40 border-[#E5E1D8] text-stone-600' 
+              : 'bg-[#121211]/80 border-[#2E2E2A]/60 text-stone-400'
+          }`}>
+            <span>🔒</span>
+            <span>الرسائل والمكالمات مشفرة تماماً.</span>
+            {isRealMode && <span className="text-[#C5A059] font-black">● الغرفة النشطة: {roomId}</span>}
           </span>
         </div>
 
@@ -1351,7 +1372,7 @@ export default function ChatArea({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 bg-[#0B0B0A]/95 p-2 rounded-[24px] border border-[#2E2E2A]/40 shadow-xl">
+          <div className={`flex items-center gap-2 ${isLightMode ? 'bg-[#F2F0E9] border-[#E5E1D8]' : 'bg-[#0B0B0A]/95 border-[#2E2E2A]/40'} p-2 rounded-[24px] border shadow-xl`}>
             
             {/* Attach Action */}
             <button
@@ -1360,7 +1381,7 @@ export default function ChatArea({
                 setShowEmojiPicker(false);
               }}
               className={`p-2.5 rounded-full transition duration-300 cursor-pointer ${
-                showAttachmentMenu ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : 'hover:bg-[#1C1C1A] text-stone-400'
+                showAttachmentMenu ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : `${isLightMode ? 'hover:bg-stone-250 text-stone-500' : 'hover:bg-[#1C1C1A] text-stone-400'}`
               }`}
               title="إرفاق ملفات"
             >
@@ -1374,7 +1395,7 @@ export default function ChatArea({
                 setShowAttachmentMenu(false);
               }}
               className={`p-2.5 rounded-full transition duration-300 cursor-pointer ${
-                showEmojiPicker ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : 'hover:bg-[#1C1C1A] text-stone-400'
+                showEmojiPicker ? 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30' : `${isLightMode ? 'hover:bg-stone-250 text-stone-500' : 'hover:bg-[#1C1C1A] text-stone-400'}`
               }`}
               title="ملصقات ورموز"
             >
@@ -1390,7 +1411,7 @@ export default function ChatArea({
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder={getTranslation(currentUser.language, 'typeMessage')}
-                className="w-full bg-[#121213] border border-[#2E2E2A]/60 rounded-full py-3 px-5 text-xs sm:text-sm text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-[#C5A059]/30 focus:border-[#C5A059] transition-all"
+                className={`w-full ${isLightMode ? 'bg-white border-[#E5E1D8] text-stone-800 placeholder-stone-400' : 'bg-[#121213] border-[#2E2E2A]/60 text-white placeholder-stone-500'} border rounded-full py-3 px-5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A059]/30 focus:border-[#C5A059] transition-all`}
               />
             </div>
 
