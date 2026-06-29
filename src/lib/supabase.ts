@@ -19,6 +19,19 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- جدول ملفات التعريف (profiles)
+CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  avatar TEXT,
+  email TEXT,
+  avatar_type TEXT DEFAULT 'emoji',
+  avatar_url TEXT,
+  status TEXT DEFAULT 'online',
+  role TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 2. جدول جهات الاتصال (contacts)
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,
@@ -63,6 +76,7 @@ CREATE TABLE IF NOT EXISTS calls (
 
 -- تفعيل الصلاحيات لجميع الجداول (لتسهيل القراءة والكتابة من خلال Anon Key)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calls ENABLE ROW LEVEL SECURITY;
@@ -71,6 +85,11 @@ DROP POLICY IF EXISTS "Allow anonymous read" ON users;
 CREATE POLICY "Allow anonymous read" ON users FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow anonymous write" ON users;
 CREATE POLICY "Allow anonymous write" ON users FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow anonymous read" ON profiles;
+CREATE POLICY "Allow anonymous read" ON profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anonymous write" ON profiles;
+CREATE POLICY "Allow anonymous write" ON profiles FOR ALL USING (true);
 
 DROP POLICY IF EXISTS "Allow anonymous read" ON contacts;
 CREATE POLICY "Allow anonymous read" ON contacts FOR SELECT USING (true);
@@ -116,6 +135,38 @@ export async function syncUserToSupabase(user: {
     return !error;
   } catch (err) {
     console.error('Supabase users error:', err);
+    return false;
+  }
+}
+
+/**
+ * Safely inserts or updates a user profile in Supabase profiles table
+ */
+export async function syncProfileToSupabase(user: {
+  id: string;
+  name: string;
+  avatar: string;
+  email: string;
+  avatarType: 'emoji' | 'image_url';
+  avatarUrl: string;
+  status: 'online' | 'offline' | 'away';
+  role?: string;
+}) {
+  try {
+    const { error } = await supabase.from('profiles').upsert({
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar,
+      email: user.email,
+      avatar_type: user.avatarType,
+      avatar_url: user.avatarUrl,
+      status: user.status,
+      role: user.role || 'مستخدم مسجل'
+    });
+    if (error) console.warn('Supabase profiles upsert notice:', error.message);
+    return !error;
+  } catch (err) {
+    console.error('Supabase profiles error:', err);
     return false;
   }
 }
