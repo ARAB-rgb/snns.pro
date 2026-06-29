@@ -226,6 +226,34 @@ class SoundSynthesizer {
     osc2.start(now + 0.07);
     osc2.stop(now + 0.13);
   }
+
+  // Pleasant notification bell/chime for reminders
+  playNotification() {
+    const ctx = this.initCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // F5 then A5 chime
+    const notes = [698.46, 880.00];
+
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+
+      gain.gain.setValueAtTime(0, now + idx * 0.12);
+      gain.gain.linearRampToValueAtTime(0.08, now + idx * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + idx * 0.12);
+      osc.stop(now + idx * 0.12 + 0.4);
+    });
+  }
 }
 
 export const sounds = new SoundSynthesizer();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Contact, Message, CallRecord, CallState } from './types';
+import { Contact, Message, CallRecord, CallState, MessageReminder } from './types';
 import { INITIAL_CONTACTS, INITIAL_MESSAGES, INITIAL_CALL_RECORDS } from './data';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import { logout as firebaseLogout } from './lib/firebaseAuth';
-import { syncUserToSupabase, syncMessageToSupabase, syncCallToSupabase } from './lib/supabase';
+import { supabase, syncUserToSupabase, syncMessageToSupabase, syncCallToSupabase } from './lib/supabase';
 import { 
   requestNotificationPermission, 
   showBrowserNotification 
@@ -98,7 +98,7 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
 
   const [callHistory, setCallHistory] = useState<CallRecord[]>(INITIAL_CALL_RECORDS);
-  const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts'>('chats');
+  const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts' | 'groups'>('chats');
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [welcomeNotification, setWelcomeNotification] = useState<{
     show: boolean;
@@ -108,6 +108,71 @@ export default function App() {
     senderAvatar: string;
     fullMsg: string;
   } | null>(null);
+
+  const [reminders, setReminders] = useState<MessageReminder[]>(() => {
+    try {
+      const saved = localStorage.getItem('message_reminders_list');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('message_reminders_list', JSON.stringify(reminders));
+  }, [reminders]);
+
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = Date.now();
+      let updated = false;
+      const nextReminders = reminders.map(r => {
+        if (!r.triggered && r.remindAt <= now) {
+          updated = true;
+          
+          // Request permission dynamically just in case
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+          }
+
+          // Trigger browser notification
+          showBrowserNotification({
+            title: `⏰ تذكير بالرسالة من ${r.senderName}`,
+            body: r.messageText,
+            tag: `reminder-${r.id}`
+          });
+
+          // In-app alert / custom notification
+          setWelcomeNotification({
+            show: true,
+            title: `⏰ تذكير بميعاد الرسالة`,
+            message: r.messageText,
+            senderName: r.senderName,
+            senderAvatar: '⏰',
+            fullMsg: `تنبيه بالتذكير\n\nتذكير بالرسالة من ${r.senderName}\n\nنص الرسالة المنبه عنها: "${r.messageText}"`
+          });
+
+          // Play a nice sound
+          try {
+            sounds.playNotification();
+          } catch (e) {
+            console.warn("Could not play notification sound:", e);
+          }
+
+          return { ...r, triggered: true };
+        }
+        return r;
+      });
+
+      if (updated) {
+        setReminders(nextReminders);
+      }
+    };
+
+    const interval = setInterval(checkReminders, 2500);
+    return () => clearInterval(interval);
+  }, [reminders]);
+
 
   // Firebase Firestore Real-Time Subscriptions & Auto-Seeding
   const [dbConnected, setDbConnected] = useState(false);
@@ -259,6 +324,60 @@ export default function App() {
       unsubscribeContacts();
       unsubscribeMessages();
       unsubscribeCalls();
+    };
+  }, []);
+
+  // Listen to Supabase Auth changes
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const u = session.user;
+          handleLoginSuccess({
+            id: u.id,
+            name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'مستخدم Google',
+            avatar: u.user_metadata?.avatar_url || '👤',
+            email: u.email || '',
+            avatarType: u.user_metadata?.avatar_url ? 'image_url' : 'emoji',
+            avatarUrl: u.user_metadata?.avatar_url || '',
+            isGoogleLinked: true,
+            googleEmail: u.email || '',
+            status: 'online',
+            role: 'مستخدم مسجل'
+          });
+        }
+      } catch (err) {
+        console.error("Error checking Supabase session:", err);
+      }
+    };
+    
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const u = session.user;
+        handleLoginSuccess({
+          id: u.id,
+          name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'مستخدم Google',
+          avatar: u.user_metadata?.avatar_url || '👤',
+          email: u.email || '',
+          avatarType: u.user_metadata?.avatar_url ? 'image_url' : 'emoji',
+          avatarUrl: u.user_metadata?.avatar_url || '',
+          isGoogleLinked: true,
+          googleEmail: u.email || '',
+          status: 'online',
+          role: 'مستخدم مسجل'
+        });
+      } else if (event === 'SIGNED_OUT') {
+        setIsLoggedIn(false);
+        localStorage.removeItem('isLoggedIn_state');
+        localStorage.removeItem('currentUser_profile');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -636,6 +755,7 @@ export default function App() {
 
     const handleLogout = () => {
       firebaseLogout().catch(err => console.error("Firebase logout error:", err));
+      supabase.auth.signOut().catch(err => console.error("Supabase logout error:", err));
       setIsLoggedIn(false);
       setShowLogin(false);
       localStorage.removeItem('isLoggedIn_state');
@@ -670,7 +790,7 @@ export default function App() {
   };
 
   // Orcherstrate sending a message and triggering a response from Gemini
-  const handleSendMessage = async (text: string, type: 'text' | 'image' | 'voice' | 'file' = 'text', extra: any = {}) => {
+  const handleSendMessage = async (text: string, type: 'text' | 'image' | 'voice' | 'file' | 'video' = 'text', extra: any = {}) => {
     if (!activeContact) return;
 
     const messageSessionId = activeContact.isGroup 
@@ -1361,6 +1481,9 @@ export default function App() {
             isRealMode={!!roomId}
             roomId={roomId || undefined}
             currentUser={currentUser as any}
+            reminders={reminders}
+            onAddReminder={(reminder) => setReminders(prev => [reminder, ...prev])}
+            onCancelReminder={(reminderId) => setReminders(prev => prev.filter(r => r.id !== reminderId))}
           />
         </div>
       </div>

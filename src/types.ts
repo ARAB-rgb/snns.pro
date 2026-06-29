@@ -17,7 +17,7 @@ export interface Message {
   senderName: string;
   text: string;
   timestamp: string;
-  type: 'text' | 'image' | 'voice' | 'file';
+  type: 'text' | 'image' | 'voice' | 'file' | 'video';
   mediaUrl?: string;
   duration?: number; // for voice note duration in seconds
   fileName?: string;
@@ -43,3 +43,13 @@ export interface CallState {
   isVideoOff: boolean;
   isScreenSharing: boolean;
 }
+
+export interface MessageReminder {
+  id: string;
+  messageId: string;
+  messageText: string;
+  senderName: string;
+  remindAt: number; // timestamp in ms
+  triggered: boolean;
+}
+

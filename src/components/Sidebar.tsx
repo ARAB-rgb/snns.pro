@@ -53,8 +53,8 @@ interface SidebarProps {
   messages: Message[];
   callHistory: CallRecord[];
   onTriggerIncomingCall: (contactId: string, type: 'video' | 'audio') => void;
-  activeTab: 'chats' | 'calls' | 'contacts';
-  setActiveTab: (tab: 'chats' | 'calls' | 'contacts') => void;
+  activeTab: 'chats' | 'calls' | 'contacts' | 'groups';
+  setActiveTab: (tab: 'chats' | 'calls' | 'contacts' | 'groups') => void;
   onStartCall: (contact: Contact, type: 'video' | 'audio') => void;
   
   // Custom added props for user request
@@ -169,6 +169,14 @@ export default function Sidebar({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showGoogleChoiceModal, setShowGoogleChoiceModal] = useState(false);
   
+  // New Group input states
+  const [showNewGroupModal, setShowNewGroupModal] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupRole, setNewGroupRole] = useState('مجموعة لمناقشة المواضيع العامة');
+  const [newGroupAvatar, setNewGroupAvatar] = useState('👥');
+  const [newGroupVisibility, setNewGroupVisibility] = useState<'public' | 'hidden'>('public');
+  const [newGroupSelectedMembers, setNewGroupSelectedMembers] = useState<string[]>([]);
+  
   // New Contact input states
   const [newContactName, setNewContactName] = useState('');
   const [newContactRole, setNewContactRole] = useState('صديق');
@@ -222,6 +230,58 @@ export default function Sidebar({
       setSyncMessage(null);
     }
   }, [currentUser, showSettingsModal]);
+
+  // Local state to keep track of read message IDs to calculate unreads accurately
+  const [readMessageIds, setReadMessageIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('readMessageIds_list');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (!activeContact) return;
+    
+    // Find all messages that belong to the active contact/group
+    const isGroup = activeContact.id.startsWith('group_') || activeContact.isGroup;
+    const contactMsgs = messages.filter(m => {
+      if (isGroup) {
+        return m.id.startsWith(activeContact.id) || m.id.endsWith(activeContact.id);
+      } else {
+        return (m.senderId === activeContact.id && !m.id.includes('group_')) || 
+               (m.senderId === 'me' && m.id.includes(`_${activeContact.id}`));
+      }
+    });
+
+    // Extract message IDs that are not already marked as read
+    const unreadIds = contactMsgs
+      .filter(m => m.senderId !== 'me' && !readMessageIds.includes(m.id))
+      .map(m => m.id);
+
+    if (unreadIds.length > 0) {
+      setReadMessageIds(prev => {
+        const updated = Array.from(new Set([...prev, ...unreadIds]));
+        localStorage.setItem('readMessageIds_list', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [activeContact, messages, readMessageIds]);
+
+  const getUnreadCount = (contactId: string) => {
+    const isGroup = contactId.startsWith('group_');
+    const groupMsgs = messages.filter(m => {
+      if (isGroup) {
+        return m.id.startsWith(contactId) || m.id.endsWith(contactId);
+      } else {
+        return (m.senderId === contactId && !m.id.includes('group_')) || 
+               (m.senderId === 'me' && m.id.includes(`_${contactId}`));
+      }
+    });
+
+    return groupMsgs.filter(m => m.senderId !== 'me' && !readMessageIds.includes(m.id)).length;
+  };
 
   const fetchSupabaseStatus = async () => {
     const res = await checkSupabaseTables();
@@ -287,19 +347,6 @@ export default function Sidebar({
 
   // Filter contacts based on search query AND hidden visibility
   const filteredContacts = contacts.filter((c) => {
-    // For non-admin (client) users, show ONLY the Admin contacts so they don't see anything else
-    if (!isAdmin) {
-      const isContactAdmin = c.id === '1007363904' || 
-                             c.id === '139213' || 
-                             c.name?.includes('الأدمن') || 
-                             c.role?.includes('الأدمن') || 
-                             c.name?.includes('أدمن') || 
-                             c.role?.includes('أدمن');
-      if (!isContactAdmin) {
-        return false;
-      }
-    }
-
     // 1. Privacy filter: Hide hidden contacts unless privacy mode is unlocked
     if (c.visibility === 'hidden' && !showHiddenContacts) {
       return false;
@@ -361,89 +408,65 @@ export default function Sidebar({
     return chatMsgs[chatMsgs.length - 1];
   };
 
-  // Trigger real or simulated Google Login
-  const handleGoogleConnect = async (mode: 'real' | 'mock') => {
-    setShowGoogleChoiceModal(false);
-    if (mode === 'real') {
-      try {
-        const result = await googleSignIn();
-        if (!result) return;
+  // Trigger real Google Login
+  const handleGoogleConnect = async () => {
+    try {
+      const result = await googleSignIn();
+      if (!result) return;
+      
+      const { user, accessToken } = result;
+      
+      // Fetch real Google Contacts
+      const googleConnections = await fetchGoogleContactsFromAPI(accessToken);
+      
+      // Map Google connections to Contact format
+      const importedContacts: Contact[] = googleConnections.map((person, idx) => {
+        const id = person.resourceName ? person.resourceName.replace('people/', 'google_') : `google_${Date.now()}_${idx}`;
+        const name = person.names?.[0]?.displayName || person.emailAddresses?.[0]?.value || 'جهة اتصال Google مجهولة';
+        const email = person.emailAddresses?.[0]?.value || '';
+        const avatar = person.photos?.[0]?.url || '👤';
         
-        const { user, accessToken } = result;
+        const roles = [
+          'مستورد من Google • زميل دراسة ومطور برمجيات ذكي',
+          'مستورد من Google • صديق مقرب',
+          'مستورد من Google • مدير العمل التقني',
+          'مستورد من Google • أخصائي استشاري',
+          'مستورد من Google • عضو فريق المبادرة'
+        ];
+        const role = roles[idx % roles.length];
         
-        // Fetch real Google Contacts
-        const googleConnections = await fetchGoogleContactsFromAPI(accessToken);
-        
-        // Map Google connections to Contact format
-        const importedContacts: Contact[] = googleConnections.map((person, idx) => {
-          const id = person.resourceName ? person.resourceName.replace('people/', 'google_') : `google_${Date.now()}_${idx}`;
-          const name = person.names?.[0]?.displayName || person.emailAddresses?.[0]?.value || 'جهة اتصال Google مجهولة';
-          const email = person.emailAddresses?.[0]?.value || '';
-          const avatar = person.photos?.[0]?.url || '👤';
-          
-          const roles = [
-            'مستورد من Google • زميل دراسة ومطور برمجيات ذكي',
-            'مستورد من Google • صديق مقرب',
-            'مستورد من Google • مدير العمل التقني',
-            'مستورد من Google • أخصائي استشاري',
-            'مستورد من Google • عضو فريق المبادرة'
-          ];
-          const role = roles[idx % roles.length];
-          
-          return {
-            id,
-            name,
-            avatar,
-            status: 'offline' as const,
-            role,
-            bio: email ? `${email} • مستورد من حساب Google الخاص بك 🌐` : 'مستورد من حساب Google الخاص بك 🌐',
-            isGroup: false,
-            visibility: 'public' as const
-          };
-        });
+        return {
+          id,
+          name,
+          avatar,
+          status: 'offline' as const,
+          role,
+          bio: email ? `${email} • مستورد من حساب Google الخاص بك 🌐` : 'مستورد من حساب Google الخاص بك 🌐',
+          isGroup: false,
+          visibility: 'public' as const
+        };
+      });
 
-        // Update current user state with Google profile details
-        onUpdateCurrentUser({
-          ...currentUser,
-          name: user.displayName || currentUser.name,
-          avatarType: 'image_url',
-          avatarUrl: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150',
-          isGoogleLinked: true,
-          googleEmail: user.email || ''
-        });
-
-        // Remove old Google contacts (mock or real) and add new ones
-        const baseContacts = contacts.filter(c => !c.id.startsWith('g') && !c.id.startsWith('google_'));
-        const updatedList = [...importedContacts, ...baseContacts];
-        
-        onUpdateContacts(updatedList);
-        
-        alert(`🎉 تم الربط والمزامنة بنجاح! تم استيراد ${importedContacts.length} جهة اتصال حقيقية من حساب Google الخاص بك وتحديث صورتك الشخصية المستوردة تلقائياً.`);
-      } catch (err: any) {
-        console.error("Google sync error:", err);
-        alert(`❌ فشل ربط ومزامنة Google: ${err.message || err}`);
-      }
-    } else {
-      // Simulate beautiful Google linking
+      // Update current user state with Google profile details
       onUpdateCurrentUser({
         ...currentUser,
-        name: 'عبدالله العتيبي (جوجل)',
+        name: user.displayName || currentUser.name,
         avatarType: 'image_url',
-        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150',
+        avatarUrl: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150',
         isGoogleLinked: true,
-        googleEmail: 'abdullah.otaibi@gmail.com'
+        googleEmail: user.email || ''
       });
+
+      // Remove old Google contacts (mock or real) and add new ones
+      const baseContacts = contacts.filter(c => !c.id.startsWith('g') && !c.id.startsWith('google_'));
+      const updatedList = [...importedContacts, ...baseContacts];
       
-      // Automatically import simulated contacts
-      const updatedList = [...contacts];
-      GOOGLE_MOCK_CONTACTS.forEach(mockC => {
-        if (!updatedList.some(c => c.id === mockC.id)) {
-          updatedList.unshift(mockC);
-        }
-      });
       onUpdateContacts(updatedList);
       
-      alert("🎉 تم الربط بنجاح! تم استيراد 5 جهات اتصال من حساب Google الخاص بك وتحديث صورتك الشخصية المستوردة تلقائياً.");
+      alert(`🎉 تم الربط والمزامنة بنجاح! تم استيراد ${importedContacts.length} جهة اتصال حقيقية من حساب Google الخاص بك وتحديث صورتك الشخصية المستوردة تلقائياً.`);
+    } catch (err: any) {
+      console.error("Google sync error:", err);
+      alert(`❌ فشل ربط ومزامنة Google: ${err.message || err}`);
     }
   };
 
@@ -499,6 +522,38 @@ export default function Sidebar({
     setNewContactAvatar('👤');
     setNewContactVisibility('public');
     setShowNewContactModal(false);
+  };
+
+  // Create Group Handler
+  const handleCreateGroupSubmit = () => {
+    if (!newGroupName.trim()) return;
+
+    const newGroupId = `group_${Date.now()}`;
+    const newGroup: Contact = {
+      id: newGroupId,
+      name: newGroupName,
+      avatar: newGroupAvatar,
+      status: 'online',
+      role: newGroupRole,
+      bio: newGroupRole,
+      isGroup: true,
+      visibility: newGroupVisibility,
+      members: newGroupSelectedMembers.length > 0 
+        ? newGroupSelectedMembers 
+        : contacts.filter(c => !c.isGroup).slice(0, 3).map(c => c.id)
+    };
+
+    onUpdateContacts([newGroup, ...contacts]);
+    onSelectContact(newGroup);
+    setActiveTab('chats');
+
+    // Reset fields
+    setNewGroupName('');
+    setNewGroupRole('مجموعة لمناقشة المواضيع العامة');
+    setNewGroupAvatar('👥');
+    setNewGroupVisibility('public');
+    setNewGroupSelectedMembers([]);
+    setShowNewGroupModal(false);
   };
 
   // Edit Contact Handler
@@ -580,6 +635,10 @@ export default function Sidebar({
     setShowSettingsModal(false);
     alert("⚙️ تم حفظ تعديلات الملف الشخصي بنجاح.");
   };
+
+  const totalGroupsUnread = contacts
+    .filter(c => c.isGroup)
+    .reduce((sum, c) => sum + getUnreadCount(c.id), 0);
 
   return (
     <div id="app_sidebar" className="w-full md:w-96 flex flex-col h-full bg-[#FAF9F6] border-l border-[#E5E1D8] text-[#2D2D2D] select-none">
@@ -719,37 +778,55 @@ export default function Sidebar({
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex bg-[#121211] border-b border-[#2E2E2A]/60 text-xs font-semibold text-stone-400">
+      <div className="flex bg-[#121211] border-b border-[#2E2E2A]/60 text-[11px] font-semibold text-stone-400 overflow-x-auto">
         <button
           id="tab_chats"
           onClick={() => setActiveTab('chats')}
-          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 min-w-[70px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
             activeTab === 'chats' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
           }`}
         >
-          <MessageSquare className="w-4 h-4" />
+          <MessageSquare className="w-3.5 h-3.5" />
           <span>الدردشات</span>
           {activeTab === 'chats' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
         <button
+          id="tab_groups"
+          onClick={() => setActiveTab('groups')}
+          className={`flex-1 min-w-[80px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
+            activeTab === 'groups' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>المجموعات</span>
+          {totalGroupsUnread > 0 ? (
+            <span className="bg-rose-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full animate-pulse">
+              {totalGroupsUnread}
+            </span>
+          ) : (
+            <span className="text-[9px] text-stone-500">({contacts.filter(c => c.isGroup).length})</span>
+          )}
+          {activeTab === 'groups' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
+        </button>
+        <button
           id="tab_calls"
           onClick={() => setActiveTab('calls')}
-          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 min-w-[70px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
             activeTab === 'calls' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
           }`}
         >
-          <Phone className="w-4 h-4" />
+          <Phone className="w-3.5 h-3.5" />
           <span>المكالمات</span>
           {activeTab === 'calls' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
         <button
           id="tab_contacts"
           onClick={() => setActiveTab('contacts')}
-          className={`flex-1 py-3 text-center transition relative flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 min-w-[70px] py-3 text-center transition relative flex items-center justify-center gap-1 cursor-pointer ${
             activeTab === 'contacts' ? 'text-[#C5A059] font-black bg-[#0B0B0A]' : 'hover:bg-[#1C1C1A]/50'
           }`}
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-3.5 h-3.5" />
           <span>العناوين ({filteredContacts.length})</span>
           {activeTab === 'contacts' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A059]"></span>}
         </button>
@@ -758,65 +835,83 @@ export default function Sidebar({
       {/* Dynamic List Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0D0D0C]">
         {activeTab === 'chats' && (
-          <div className="divide-y divide-[#E5E1D8]/40">
-            {filteredContacts.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#A8A293]">لا توجد محادثات متطابقة</div>
-            ) : (
-              filteredContacts.map((contact) => {
-                const lastMsg = getLastMessage(contact.id);
-                const isSelected = activeContact?.id === contact.id;
-                
-                return (
-                  <div
-                    key={contact.id}
-                    id={`chat_item_${contact.id}`}
-                    onClick={() => onSelectContact(contact)}
-                    className={`p-3.5 flex items-center justify-between cursor-pointer transition relative border-b border-[#2E2E2A]/30 ${
-                      isSelected ? 'bg-[#1C1C1A] border-r-4 border-[#C5A059]' : 'hover:bg-[#121211]/55'
-                    } ${contact.visibility === 'hidden' ? 'bg-amber-950/20 border-l-2 border-dashed border-amber-600' : ''}`}
-                  >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="relative flex-shrink-0">
-                        {renderContactAvatar(contact, "w-11 h-11 text-xl")}
-                        {contact.status === 'online' && (
-                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#0D0D0C] rounded-full animate-pulse"></span>
-                        )}
-                        {contact.status === 'away' && (
-                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-500 border-2 border-[#0D0D0C] rounded-full"></span>
-                        )}
+          <div>
+            {/* Create Group Prominent Button */}
+            <div className="p-3 bg-[#121211]/55 border-b border-[#2E2E2A]/40 flex items-center justify-between">
+              <span className="text-[10px] text-stone-400 font-bold">المحادثات المفتوحة</span>
+              <button
+                onClick={() => {
+                  setNewGroupSelectedMembers([]);
+                  setShowNewGroupModal(true);
+                }}
+                className="px-2.5 py-1.5 bg-[#C5A059]/15 hover:bg-[#C5A059]/25 text-[#C5A059] border border-[#C5A059]/30 rounded-xl flex items-center gap-1.5 transition text-[10.5px] font-extrabold cursor-pointer"
+                title="إنشاء غرفة جماعية أو مجموعة جديدة"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span>إنشاء غرفة جماعية / مجموعة</span>
+              </button>
+            </div>
+            
+            <div className="divide-y divide-[#E5E1D8]/40">
+              {filteredContacts.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#A8A293]">لا توجد محادثات متطابقة</div>
+              ) : (
+                filteredContacts.map((contact) => {
+                  const lastMsg = getLastMessage(contact.id);
+                  const isSelected = activeContact?.id === contact.id;
+                  
+                  return (
+                    <div
+                      key={contact.id}
+                      id={`chat_item_${contact.id}`}
+                      onClick={() => onSelectContact(contact)}
+                      className={`p-3.5 flex items-center justify-between cursor-pointer transition relative border-b border-[#2E2E2A]/30 ${
+                        isSelected ? 'bg-[#1C1C1A] border-r-4 border-[#C5A059]' : 'hover:bg-[#121211]/55'
+                      } ${contact.visibility === 'hidden' ? 'bg-amber-950/20 border-l-2 border-dashed border-amber-600' : ''}`}
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="relative flex-shrink-0">
+                          {renderContactAvatar(contact, "w-11 h-11 text-xl")}
+                          {contact.status === 'online' && (
+                            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#0D0D0C] rounded-full animate-pulse"></span>
+                          )}
+                          {contact.status === 'away' && (
+                            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-500 border-2 border-[#0D0D0C] rounded-full"></span>
+                          )}
+                        </div>
+                        <div className="text-right overflow-hidden">
+                          <h3 className="font-bold text-sm text-white flex items-center gap-1 truncate">
+                            {contact.name}
+                            {contact.isGroup && (
+                              <span className="text-[9px] bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30 px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
+                            )}
+                            {contact.visibility === 'hidden' && (
+                              <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-800/50 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="جهة اتصال مخفية">
+                                🔒 مخفية
+                              </span>
+                            )}
+                          </h3>
+                          <p className="text-xs text-stone-400 truncate mt-0.5 max-w-[190px]">
+                            {contact.status === 'typing' ? (
+                              <span className="text-[#C5A059] font-bold animate-pulse">يكتب الآن...</span>
+                            ) : (
+                              lastMsg.text
+                            )}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right overflow-hidden">
-                        <h3 className="font-bold text-sm text-white flex items-center gap-1 truncate">
-                          {contact.name}
-                          {contact.isGroup && (
-                            <span className="text-[9px] bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30 px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
-                          )}
-                          {contact.visibility === 'hidden' && (
-                            <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-800/50 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="جهة اتصال مخفية">
-                              🔒 مخفية
-                            </span>
-                          )}
-                        </h3>
-                        <p className="text-xs text-stone-400 truncate mt-0.5 max-w-[190px]">
-                          {contact.status === 'typing' ? (
-                            <span className="text-[#C5A059] font-bold animate-pulse">يكتب الآن...</span>
-                          ) : (
-                            lastMsg.text
-                          )}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-col items-end gap-1 text-left flex-shrink-0">
-                      <span className="text-[9px] text-[#A89F91] font-mono">{lastMsg.timestamp}</span>
-                      {contact.status === 'online' && !isSelected && (
-                        <span className="w-2 h-2 bg-[#C5A059] rounded-full"></span>
-                      )}
+                      <div className="flex flex-col items-end gap-1 text-left flex-shrink-0">
+                        <span className="text-[9px] text-[#A89F91] font-mono">{lastMsg.timestamp}</span>
+                        {contact.status === 'online' && !isSelected && (
+                          <span className="w-2 h-2 bg-[#C5A059] rounded-full"></span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
 
@@ -950,6 +1045,93 @@ export default function Sidebar({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'groups' && (
+          <div>
+            {/* Create Group Prominent Button */}
+            <div className="p-3 bg-[#121211]/55 border-b border-[#2E2E2A]/40 flex items-center justify-between">
+              <span className="text-[10px] text-[#C5A059] font-bold">المجموعات والغرف الجماعية ({contacts.filter(c => c.isGroup).length})</span>
+              <button
+                onClick={() => {
+                  setNewGroupSelectedMembers([]);
+                  setShowNewGroupModal(true);
+                }}
+                className="px-2.5 py-1.5 bg-[#C5A059]/15 hover:bg-[#C5A059]/25 text-[#C5A059] border border-[#C5A059]/30 rounded-xl flex items-center gap-1.5 transition text-[10.5px] font-extrabold cursor-pointer"
+                title="إنشاء غرفة جماعية أو مجموعة جديدة"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span>إنشاء مجموعة</span>
+              </button>
+            </div>
+
+            <div className="divide-y divide-[#2E2E2A]/30">
+              {contacts.filter(c => c.isGroup && (searchQuery ? c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.role.toLowerCase().includes(searchQuery.toLowerCase()) : true)).length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#A8A293]">لا توجد مجموعات متطابقة</div>
+              ) : (
+                contacts
+                  .filter(c => c.isGroup && (searchQuery ? c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.role.toLowerCase().includes(searchQuery.toLowerCase()) : true))
+                  .map((contact) => {
+                    const lastMsg = getLastMessage(contact.id);
+                    const isSelected = activeContact?.id === contact.id;
+                    const unreadCount = getUnreadCount(contact.id);
+                    
+                    return (
+                      <div
+                        key={contact.id}
+                        id={`group_tab_item_${contact.id}`}
+                        onClick={() => {
+                          onSelectContact(contact);
+                          setActiveTab('chats');
+                        }}
+                        className={`p-3.5 flex items-center justify-between cursor-pointer transition relative border-b border-[#2E2E2A]/30 ${
+                          isSelected ? 'bg-[#1C1C1A] border-r-4 border-[#C5A059]' : 'hover:bg-[#121211]/55'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="relative flex-shrink-0">
+                            {renderContactAvatar(contact, "w-11 h-11 text-xl")}
+                            {unreadCount > 0 && (
+                              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full flex items-center justify-center animate-ping"></span>
+                            )}
+                            {contact.status === 'online' && (
+                              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border border-[#0D0D0C] rounded-full"></span>
+                            )}
+                          </div>
+                          <div className="text-right overflow-hidden">
+                            <h3 className="font-bold text-sm text-white flex items-center gap-1 truncate">
+                              {contact.name}
+                              <span className="text-[9px] bg-[#C5A059]/25 text-[#C5A059] border border-[#C5A059]/45 px-1.5 py-0.2 rounded-full font-bold">
+                                {contact.members ? `${contact.members.length} أعضاء` : 'عامة'}
+                              </span>
+                            </h3>
+                            <p className="text-xs text-stone-400 truncate mt-0.5 max-w-[190px]">
+                              {contact.status === 'typing' ? (
+                                <span className="text-[#C5A059] font-bold animate-pulse">يكتب الآن...</span>
+                              ) : (
+                                lastMsg.text
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 text-left flex-shrink-0">
+                          <span className="text-[9px] text-[#A89F91] font-mono">{lastMsg.timestamp}</span>
+                          {unreadCount > 0 ? (
+                            <div className="flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded-full animate-bounce">
+                              <BellRing className="w-3 h-3 text-rose-400" />
+                              <span className="text-[10px] font-black">{unreadCount}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] text-stone-500">نشط</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
             </div>
           </div>
         )}
@@ -1185,20 +1367,10 @@ export default function Sidebar({
                     
                     <div className="flex gap-2">
                       <button
-                        onClick={() => {
-                          // Re-import Contacts
-                          const updatedList = [...contacts];
-                          GOOGLE_MOCK_CONTACTS.forEach(mockC => {
-                            if (!updatedList.some(c => c.id === mockC.id)) {
-                              updatedList.unshift(mockC);
-                            }
-                          });
-                          onUpdateContacts(updatedList);
-                          alert("🔄 تم تحديث ومزامنة جهات اتصال Google بنجاح.");
-                        }}
+                        onClick={() => handleGoogleConnect()}
                         className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition"
                       >
-                        <Sparkles className="w-3 h-3" />
+                        <Globe className="w-3 h-3 animate-pulse" />
                         <span>مزامنة جهات الاتصال</span>
                       </button>
                       
@@ -1217,7 +1389,7 @@ export default function Sidebar({
                     
                     {/* Elegant Official Google Style Sign-In button */}
                     <button
-                      onClick={() => setShowGoogleChoiceModal(true)}
+                      onClick={() => handleGoogleConnect()}
                       className="w-full flex items-center justify-center gap-2.5 bg-white border border-[#E5E1D8] hover:bg-[#FAF9F6] active:bg-[#F2F0E9] text-[#2D2D2D] font-bold text-xs py-2.5 px-4 rounded-xl transition shadow-sm cursor-pointer"
                     >
                       <svg className="w-4 h-4" viewBox="0 0 48 48">
@@ -1256,50 +1428,6 @@ export default function Sidebar({
                 className="px-5 py-2 bg-[#556B2F] hover:bg-[#556B2F]/90 text-xs text-white font-bold rounded-xl transition shadow-md shadow-[#556B2F]/20"
               >
                 حفظ وإغلاق
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- GOOGLE LOGIN CHOICE DIALOG --- */}
-      {showGoogleChoiceModal && (
-        <div className="fixed inset-0 bg-black/70 z-[110] flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white border border-[#E5E1D8] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-right animate-fadeIn">
-            <div className="p-4 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-blue-600 animate-pulse" />
-              <h3 className="font-bold text-xs text-blue-900">ربط جهات اتصال قوقل الآمنة</h3>
-            </div>
-            
-            <div className="p-5 space-y-3">
-              <p className="text-xs text-[#2D2D2D] font-medium leading-relaxed">
-                هل ترغب في ربط حسابك بـ Google لتحديث ملفك الشخصي ومزامنة 5 من جهات اتصالك الفورية؟
-              </p>
-              <div className="text-[10px] bg-amber-50 text-amber-800 p-2.5 rounded-xl border border-amber-100 font-semibold">
-                ⚠️ ملاحظة: الربط الحقيقي يتطلب ترخيص التطبيق في لوحة Google Cloud. يمكنك استخدام المحاكاة الذكية السريعة لتجربة استيراد الأسماء والتحكم بخصوصيتها فوراً!
-              </div>
-            </div>
-
-            <div className="p-4 bg-[#F2F0E9] border-t border-[#E5E1D8] flex gap-2 justify-end flex-wrap">
-              <button
-                onClick={() => setShowGoogleChoiceModal(false)}
-                className="px-3 py-2 bg-[#E5E1D8] text-[#2D2D2D] rounded-xl text-[10px] font-bold hover:bg-[#E5E1D8]/85"
-              >
-                تراجع
-              </button>
-              <button
-                onClick={() => handleGoogleConnect('mock')}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold hover:bg-emerald-700 shadow-md shadow-emerald-500/10 flex items-center gap-1"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>مزامنة سريعة (محاكاة)</span>
-              </button>
-              <button
-                onClick={() => handleGoogleConnect('real')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold hover:bg-blue-700 shadow-md shadow-blue-500/10 flex items-center gap-1"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>ربط حقيقي (OAuth)</span>
               </button>
             </div>
           </div>
@@ -1480,6 +1608,129 @@ export default function Sidebar({
                   حفظ التعديلات
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- CREATE GROUP MODAL --- */}
+      {showNewGroupModal && (
+        <div className="fixed inset-0 bg-black/65 z-[100] flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-[#121211] border border-[#2E2E2A] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-right animate-fadeIn text-white">
+            <div className="p-4 bg-[#1C1C1A] border-b border-[#2E2E2A] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#C5A059] flex items-center gap-1.5">
+                <span>👥 إنشاء مجموعة أو غرفة جماعية جديدة</span>
+              </h3>
+              <button 
+                onClick={() => setShowNewGroupModal(false)} 
+                className="text-stone-400 hover:text-white text-lg font-bold cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-3.5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div>
+                <label className="block text-[11px] text-[#C5A059] font-bold mb-1">اسم المجموعة / الغرفة:</label>
+                <input
+                  type="text"
+                  placeholder="مثال: أصدقاء الطفولة 🍿، فريق العمل 🚀"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  className="w-full bg-[#1C1C1A] border border-[#2E2E2A] rounded-xl p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#C5A059]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#C5A059] font-bold mb-1">وصف المجموعة / الاهتمام المشترك:</label>
+                <input
+                  type="text"
+                  placeholder="مثال: مجموعة لمشاركة أخبار وتطورات المشاريع اليومية"
+                  value={newGroupRole}
+                  onChange={(e) => setNewGroupRole(e.target.value)}
+                  className="w-full bg-[#1C1C1A] border border-[#2E2E2A] rounded-xl p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#C5A059]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#C5A059] font-bold mb-1.5">حالة الخصوصية والأمان:</label>
+                <select
+                  value={newGroupVisibility}
+                  onChange={(e) => setNewGroupVisibility(e.target.value as 'public' | 'hidden')}
+                  className="w-full bg-[#1C1C1A] border border-[#2E2E2A] rounded-xl p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#C5A059]"
+                >
+                  <option value="public">عامة (تظهر للجميع في قائمة العناوين)</option>
+                  <option value="hidden">مخفية (تتطلب تفعيل وضع الخصوصية لإظهارها)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#C5A059] font-bold mb-1.5">أيقونة المجموعة (الرمز التعبيري):</label>
+                <div className="grid grid-cols-7 gap-2">
+                  {['👥', '🏡', '❤️', '💻', '🩺', '👨‍💻', '👩‍🎨', '🦊', '🦁', '⭐', '🍿', '🔥', '✈️', '🎨'].map(em => (
+                    <button
+                      key={em}
+                      type="button"
+                      onClick={() => setNewGroupAvatar(em)}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-base border transition cursor-pointer ${
+                        newGroupAvatar === em ? 'bg-[#C5A059] text-black border-transparent font-bold' : 'border-[#2E2E2A] hover:bg-[#1C1C1A]'
+                      }`}
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-[#C5A059] font-bold mb-1">تحديد أعضاء المجموعة (الحد الأدنى 1):</label>
+                <div className="bg-[#1C1C1A] border border-[#2E2E2A] rounded-xl p-2 space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+                  {contacts.filter(c => !c.isGroup).map(c => {
+                    const isSelected = newGroupSelectedMembers.includes(c.id);
+                    return (
+                      <label 
+                        key={c.id} 
+                        className={`flex items-center justify-between p-1.5 rounded-lg text-xs cursor-pointer transition ${
+                          isSelected ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'hover:bg-white/5'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span>{c.avatar}</span>
+                          <span className="font-semibold">{c.name}</span>
+                          <span className="text-[10px] text-stone-400">({c.role})</span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setNewGroupSelectedMembers(newGroupSelectedMembers.filter(id => id !== c.id));
+                            } else {
+                              setNewGroupSelectedMembers([...newGroupSelectedMembers, c.id]);
+                            }
+                          }}
+                          className="rounded bg-[#121211] border-[#2E2E2A] text-[#C5A059] focus:ring-0 text-right"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#1C1C1A] border-t border-[#2E2E2A] flex gap-2 justify-end">
+              <button
+                onClick={() => setShowNewGroupModal(false)}
+                className="px-4 py-2 bg-[#2E2E2A] hover:bg-[#2E2E2A]/80 text-xs text-white font-bold rounded-xl transition cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleCreateGroupSubmit}
+                className="px-4 py-2 bg-[#C5A059] hover:bg-[#C5A059]/90 text-xs text-black font-extrabold rounded-xl transition shadow-md shadow-[#C5A059]/20 cursor-pointer"
+              >
+                إنشاء وحفظ المجموعة
+              </button>
             </div>
           </div>
         </div>

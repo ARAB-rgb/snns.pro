@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Contact, Message } from '../types';
+import { Contact, Message, MessageReminder } from '../types';
 import BrandLogo from './BrandLogo';
 import { 
   Phone, 
@@ -21,7 +21,12 @@ import {
   Volume2,
   AlertTriangle,
   Camera,
-  RefreshCw
+  RefreshCw,
+  Download,
+  FileVideo,
+  Bell,
+  Clock,
+  Calendar
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { db } from '../lib/firebase';
@@ -30,7 +35,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 interface ChatAreaProps {
   activeContact: Contact | null;
   messages: Message[];
-  onSendMessage: (text: string, type?: 'text' | 'image' | 'voice' | 'file', extra?: any) => void;
+  onSendMessage: (text: string, type?: 'text' | 'image' | 'voice' | 'file' | 'video', extra?: any) => void;
   onStartCall: (contact: Contact, type: 'video' | 'audio') => void;
   onBackToSidebar: () => void; // for responsive mobile view
   isRealMode?: boolean;
@@ -42,6 +47,9 @@ interface ChatAreaProps {
     email: string;
     role: string;
   };
+  reminders?: MessageReminder[];
+  onAddReminder?: (reminder: MessageReminder) => void;
+  onCancelReminder?: (reminderId: string) => void;
 }
 
 export interface WallpaperOption {
@@ -68,7 +76,10 @@ export default function ChatArea({
   onBackToSidebar,
   isRealMode = false,
   roomId = null,
-  currentUser
+  currentUser,
+  reminders = [],
+  onAddReminder,
+  onCancelReminder
 }: ChatAreaProps) {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -92,6 +103,13 @@ export default function ChatArea({
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Message Reminder Modal States
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [selectedReminderMsg, setSelectedReminderMsg] = useState<Message | null>(null);
+  const [reminderMinutes, setReminderMinutes] = useState<number>(1); // default 1 min
+  const [customRemindDateTime, setCustomRemindDateTime] = useState<string>('');
+
 
   // Auto handle camera stream setup/cleanup based on modal visibility
   useEffect(() => {
@@ -176,6 +194,78 @@ export default function ChatArea({
       onSendMessage('صورة كاميرا مباشرة 📸', 'image', { mediaUrl: capturedImage });
       setShowCameraModal(false);
       setCapturedImage(null);
+    }
+  };
+
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      const sizeStr = file.size > 1024 * 1024 
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+        : `${(file.size / 1024).toFixed(0)} KB`;
+      
+      onSendMessage(file.name, 'image', { 
+        mediaUrl: url,
+        fileName: file.name,
+        fileSize: sizeStr
+      });
+      setShowAttachmentMenu(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      const sizeStr = file.size > 1024 * 1024 
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+        : `${(file.size / 1024).toFixed(0)} KB`;
+      
+      onSendMessage(file.name, 'video', { 
+        mediaUrl: url,
+        fileName: file.name,
+        fileSize: sizeStr
+      });
+      setShowAttachmentMenu(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      const sizeStr = file.size > 1024 * 1024 
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+        : `${(file.size / 1024).toFixed(0)} KB`;
+      
+      onSendMessage(file.name, 'file', { 
+        mediaUrl: url,
+        fileName: file.name,
+        fileSize: sizeStr
+      });
+      setShowAttachmentMenu(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDownload = (url: string, fileName: string) => {
+    if (!url) return;
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Download failed:", err);
     }
   };
   
@@ -496,6 +586,51 @@ export default function ChatArea({
     setShowAttachmentMenu(false);
   };
 
+  const handleOpenReminderModal = (msg: Message) => {
+    setSelectedReminderMsg(msg);
+    setReminderMinutes(1);
+    setCustomRemindDateTime('');
+    setShowReminderModal(true);
+  };
+
+  const handleSaveReminder = () => {
+    if (!selectedReminderMsg || !onAddReminder) return;
+
+    let remindAtMs = 0;
+    if (customRemindDateTime) {
+      remindAtMs = new Date(customRemindDateTime).getTime();
+    } else {
+      remindAtMs = Date.now() + reminderMinutes * 60 * 1000;
+    }
+
+    if (isNaN(remindAtMs) || remindAtMs <= Date.now()) {
+      alert("الرجاء اختيار وقت وتاريخ في المستقبل لتذكيرك به.");
+      return;
+    }
+
+    const newReminder: MessageReminder = {
+      id: `rem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      messageId: selectedReminderMsg.id,
+      messageText: selectedReminderMsg.type === 'text' ? selectedReminderMsg.text : `[رسالة ${selectedReminderMsg.type === 'image' ? 'صورة' : selectedReminderMsg.type === 'voice' ? 'صوتية' : selectedReminderMsg.type === 'video' ? 'فيديو' : 'ملف'}]`,
+      senderName: selectedReminderMsg.senderName,
+      remindAt: remindAtMs,
+      triggered: false
+    };
+
+    onAddReminder(newReminder);
+    setShowReminderModal(false);
+    setSelectedReminderMsg(null);
+
+    // Prompt user nicely
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    } catch (e) {
+      console.warn("Could not request notification permission dynamically:", e);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0A0A09] text-white select-none relative" dir="rtl">
       
@@ -655,14 +790,49 @@ export default function ChatArea({
                   )}
 
                   {msg.type === 'image' && (
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative">
                       <img 
                         src={msg.mediaUrl} 
                         alt="مرفق" 
                         referrerPolicy="no-referrer"
-                        className="rounded-xl w-60 h-40 object-cover border border-[#E5E1D8] shadow-inner"
+                        className="rounded-xl w-60 h-40 object-cover border border-[#2E2E2A]/40 shadow-inner"
                       />
-                      <span className="text-xs block text-[#A8A293] font-semibold italic">📸 صورة مرسلة</span>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[10px] block text-stone-400 font-semibold italic">📸 صورة مرسلة</span>
+                        {msg.mediaUrl && (
+                          <button
+                            onClick={() => handleDownload(msg.mediaUrl!, msg.fileName || 'image.jpg')}
+                            className="p-1 px-2 rounded bg-black/40 hover:bg-black/60 text-[#C5A059] border border-[#C5A059]/25 transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
+                            title="تحميل الصورة"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>تحميل</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {msg.type === 'video' && (
+                    <div className="space-y-1 relative">
+                      <video 
+                        src={msg.mediaUrl} 
+                        controls
+                        className="rounded-xl w-60 max-h-48 object-cover border border-[#2E2E2A]/40 shadow-inner bg-black"
+                      />
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[10px] block text-stone-400 font-semibold italic">🎥 فيديو مرسل</span>
+                        {msg.mediaUrl && (
+                          <button
+                            onClick={() => handleDownload(msg.mediaUrl!, msg.fileName || 'video.mp4')}
+                            className="p-1 px-2 rounded bg-black/40 hover:bg-black/60 text-[#C5A059] border border-[#C5A059]/25 transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
+                            title="تحميل الفيديو"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>تحميل</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -703,21 +873,67 @@ export default function ChatArea({
                   )}
 
                   {msg.type === 'file' && (
-                    <div className={`flex items-center gap-3 p-2 rounded-xl border w-60 ${
-                      isMe ? 'bg-black/10 border-white/10 text-white' : 'bg-[#FAF9F6] border-[#E5E1D8] text-[#2D2D2D]'
-                    }`}>
-                      <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-red-500 flex-shrink-0">
-                        <FileIcon className="w-5 h-5" />
+                    <div className="space-y-2">
+                      <div className={`flex items-center gap-3 p-2 rounded-xl border w-60 ${
+                        isMe ? 'bg-black/15 border-[#C5A059]/30 text-white' : 'bg-[#121211] border-[#2E2E2A] text-white'
+                      }`}>
+                        <div className="w-10 h-10 rounded-lg bg-[#C5A059]/10 flex items-center justify-center text-[#C5A059] flex-shrink-0">
+                          <FileIcon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 overflow-hidden text-right">
+                          <h4 className="text-xs font-bold truncate">{msg.fileName || msg.text}</h4>
+                          <span className="text-[9px] font-mono block mt-0.5 text-stone-400">{msg.fileSize || '1.8 MB'}</span>
+                        </div>
                       </div>
-                      <div className="flex-1 overflow-hidden">
-                        <h4 className="text-xs font-bold truncate">{msg.fileName || msg.text}</h4>
-                        <span className={`text-[9px] font-mono block mt-0.5 ${isMe ? 'text-white/80' : 'text-[#A8A293]'}`}>{msg.fileSize || '1.8 MB'}</span>
-                      </div>
+                      {msg.mediaUrl && (
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => handleDownload(msg.mediaUrl!, msg.fileName || 'file.dat')}
+                            className="p-1 px-2.5 rounded bg-[#C5A059]/20 hover:bg-[#C5A059]/45 text-[#C5A059] border border-[#C5A059]/30 transition-colors cursor-pointer flex items-center gap-1 text-[10px] w-fit font-bold"
+                            title="تحميل الملف"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>تحميل الملف</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {/* Metadata and double-ticks */}
-                  <div className="flex items-center justify-end gap-1 mt-2 self-end">
+                  <div className="flex items-center justify-end gap-2 mt-2 self-end select-none">
+                    {/* Reminder Button */}
+                    {(() => {
+                      const activeReminder = reminders.find(r => r.messageId === msg.id && !r.triggered);
+                      if (activeReminder) {
+                        return (
+                          <button
+                            onClick={() => {
+                              if (confirm("هل تريد إلغاء التذكير النشط لهذه الرسالة؟")) {
+                                onCancelReminder?.(activeReminder.id);
+                              }
+                            }}
+                            className="p-0.5 rounded-full bg-amber-400/20 text-amber-400 border border-amber-400/30 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30 transition-all flex items-center justify-center cursor-pointer animate-pulse"
+                            title="تذكير نشط! اضغط لإلغاء التذكير ⏰"
+                          >
+                            <Bell className="w-3 h-3 fill-current" />
+                          </button>
+                        );
+                      } else {
+                        return (
+                          <button
+                            onClick={() => handleOpenReminderModal(msg)}
+                            className={`p-0.5 rounded-full transition-all flex items-center justify-center cursor-pointer opacity-40 hover:opacity-100 ${
+                              isMe ? 'text-stone-950 hover:bg-white/20' : 'text-stone-400 hover:text-white hover:bg-[#2E2E2A]/60'
+                            }`}
+                            title="تذكيري بهذه الرسالة لاحقاً ⏰"
+                          >
+                            <Bell className="w-3 h-3" />
+                          </button>
+                        );
+                      }
+                    })()}
+
                     <span className={`text-[9px] font-mono ${isMe ? 'text-white/80' : 'text-[#A8A293]'}`}>
                       {msg.timestamp}
                     </span>
@@ -779,30 +995,37 @@ export default function ChatArea({
 
         {/* Attachment menu */}
         {showAttachmentMenu && (
-          <div className="absolute bottom-16 right-12 bg-white border border-[#E5E1D8] p-2 rounded-xl shadow-2xl flex flex-col gap-1 z-50 animate-fadeIn w-48">
+          <div className="absolute bottom-16 right-12 bg-[#0D0D0C] border border-[#2E2E2A] p-2 rounded-xl shadow-2xl flex flex-col gap-1 z-50 animate-fadeIn w-52 text-right">
             <button
               onClick={() => {
                 setShowCameraModal(true);
                 setShowAttachmentMenu(false);
               }}
-              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg text-right font-bold transition-all"
+              className="w-full px-3 py-2 hover:bg-[#1C1C1A] text-xs text-stone-200 flex items-center gap-2.5 rounded-lg text-right font-extrabold transition-all cursor-pointer border border-transparent hover:border-amber-500/25"
             >
-              <Camera className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <Camera className="w-4 h-4 text-amber-500 shrink-0" />
               <span>التقاط من الكاميرا 📷</span>
             </button>
             <button
-              onClick={simulateSendImage}
-              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg text-right font-semibold transition-all"
+              onClick={() => imageInputRef.current?.click()}
+              className="w-full px-3 py-2 hover:bg-[#1C1C1A] text-xs text-stone-200 flex items-center gap-2.5 rounded-lg text-right font-extrabold transition-all cursor-pointer border border-transparent hover:border-emerald-500/25"
             >
-              <ImageIcon className="w-3.5 h-3.5 text-[#556B2F]" />
-              <span>صورة افتراضية 🖼️</span>
+              <ImageIcon className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span>تحميل صورة من الجهاز 🖼️</span>
             </button>
             <button
-              onClick={simulateSendFile}
-              className="px-3 py-1.5 hover:bg-[#FAF9F6] text-xs text-[#2D2D2D] flex items-center gap-2 rounded-lg text-right font-semibold transition-all"
+              onClick={() => videoInputRef.current?.click()}
+              className="w-full px-3 py-2 hover:bg-[#1C1C1A] text-xs text-stone-200 flex items-center gap-2.5 rounded-lg text-right font-extrabold transition-all cursor-pointer border border-transparent hover:border-rose-500/25"
             >
-              <FileIcon className="w-3.5 h-3.5 text-[#556B2F]/80" />
-              <span>إرفاق ملف 📄</span>
+              <FileVideo className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>تحميل فيديو من الجهاز 🎥</span>
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-3 py-2 hover:bg-[#1C1C1A] text-xs text-stone-200 flex items-center gap-2.5 rounded-lg text-right font-extrabold transition-all cursor-pointer border border-transparent hover:border-sky-500/25"
+            >
+              <FileIcon className="w-4 h-4 text-sky-500 shrink-0" />
+              <span>تحميل ملف من الجهاز 📄</span>
             </button>
           </div>
         )}
@@ -1071,6 +1294,200 @@ export default function ChatArea({
           </div>
         </div>
       )}
+
+      {/* Reminder Modal */}
+      {showReminderModal && selectedReminderMsg && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn" dir="rtl">
+          <div className="bg-[#0C0C0E] border border-[#C5A059]/30 rounded-[28px] p-6 max-w-md w-full shadow-[0_0_40px_rgba(197,160,89,0.15)] space-y-5 animate-scaleIn text-right relative">
+            {/* Close Button */}
+            <button 
+              onClick={() => {
+                setShowReminderModal(false);
+                setSelectedReminderMsg(null);
+              }}
+              className="absolute top-4 left-4 p-1.5 bg-stone-900 border border-stone-800 rounded-full text-stone-400 hover:text-white hover:bg-stone-800 transition"
+              title="إغلاق"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2 text-[#C5A059] border-b border-[#2E2E2A]/40 pb-3">
+              <Bell className="w-5 h-5 animate-bounce" />
+              <h3 className="font-extrabold text-base text-stone-100">تذكيري بهذه الرسالة لاحقاً</h3>
+            </div>
+
+            {/* Message preview */}
+            <div className="bg-[#121211] border border-[#2E2E2A]/50 rounded-2xl p-4 space-y-1.5 shadow-inner">
+              <span className="block text-[10px] text-[#C5A059] font-bold">الرسالة المحددة من {selectedReminderMsg.senderName}:</span>
+              <p className="text-xs text-stone-300 italic line-clamp-3 select-none leading-relaxed">
+                {selectedReminderMsg.type === 'text' ? selectedReminderMsg.text : `[مرفق ${selectedReminderMsg.type === 'image' ? 'صورة' : selectedReminderMsg.type === 'voice' ? 'صوت' : selectedReminderMsg.type === 'video' ? 'فيديو' : 'ملف'}]`}
+              </p>
+            </div>
+
+            {/* Quick selectors */}
+            <div className="space-y-2">
+              <label className="text-xs font-black text-[#C5A059] flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" />
+                <span>اختر وقت التذكير السريع:</span>
+              </label>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderMinutes(1);
+                    setCustomRemindDateTime('');
+                  }}
+                  className={`py-2 px-1 rounded-xl font-bold border transition-all cursor-pointer ${
+                    reminderMinutes === 1 && !customRemindDateTime
+                      ? 'bg-[#C5A059] text-stone-950 border-[#C5A059]' 
+                      : 'bg-[#121211] hover:bg-[#1C1C1A] text-stone-300 border-[#2E2E2A]/50'
+                  }`}
+                >
+                  دقيقة واحدة ⏳
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderMinutes(5);
+                    setCustomRemindDateTime('');
+                  }}
+                  className={`py-2 px-1 rounded-xl font-bold border transition-all cursor-pointer ${
+                    reminderMinutes === 5 && !customRemindDateTime
+                      ? 'bg-[#C5A059] text-stone-950 border-[#C5A059]' 
+                      : 'bg-[#121211] hover:bg-[#1C1C1A] text-stone-300 border-[#2E2E2A]/50'
+                  }`}
+                >
+                  5 دقائق
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderMinutes(15);
+                    setCustomRemindDateTime('');
+                  }}
+                  className={`py-2 px-1 rounded-xl font-bold border transition-all cursor-pointer ${
+                    reminderMinutes === 15 && !customRemindDateTime
+                      ? 'bg-[#C5A059] text-stone-950 border-[#C5A059]' 
+                      : 'bg-[#121211] hover:bg-[#1C1C1A] text-stone-300 border-[#2E2E2A]/50'
+                  }`}
+                >
+                  15 دقيقة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderMinutes(60);
+                    setCustomRemindDateTime('');
+                  }}
+                  className={`py-2 px-1 rounded-xl font-bold border transition-all cursor-pointer ${
+                    reminderMinutes === 60 && !customRemindDateTime
+                      ? 'bg-[#C5A059] text-stone-950 border-[#C5A059]' 
+                      : 'bg-[#121211] hover:bg-[#1C1C1A] text-stone-300 border-[#2E2E2A]/50'
+                  }`}
+                >
+                  ساعة واحدة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderMinutes(180);
+                    setCustomRemindDateTime('');
+                  }}
+                  className={`py-2 px-1 rounded-xl font-bold border transition-all cursor-pointer ${
+                    reminderMinutes === 180 && !customRemindDateTime
+                      ? 'bg-[#C5A059] text-stone-950 border-[#C5A059]' 
+                      : 'bg-[#121211] hover:bg-[#1C1C1A] text-stone-300 border-[#2E2E2A]/50'
+                  }`}
+                >
+                  3 ساعات
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderMinutes(1440);
+                    setCustomRemindDateTime('');
+                  }}
+                  className={`py-2 px-1 rounded-xl font-bold border transition-all cursor-pointer ${
+                    reminderMinutes === 1440 && !customRemindDateTime
+                      ? 'bg-[#C5A059] text-stone-950 border-[#C5A059]' 
+                      : 'bg-[#121211] hover:bg-[#1C1C1A] text-stone-300 border-[#2E2E2A]/50'
+                  }`}
+                >
+                  يوم كامل
+                </button>
+              </div>
+            </div>
+
+            {/* Custom date time picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-[#C5A059] flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>أو حدد تاريخ ووقت مخصصين:</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={customRemindDateTime}
+                onChange={(e) => {
+                  setCustomRemindDateTime(e.target.value);
+                  setReminderMinutes(0);
+                }}
+                className="w-full bg-[#121211] border border-[#2E2E2A]/50 rounded-xl p-3 text-xs text-stone-200 focus:outline-none focus:ring-1 focus:ring-[#C5A059] focus:border-[#C5A059] transition-all cursor-pointer text-right [color-scheme:dark]"
+              />
+            </div>
+
+            {/* Notification permission status info */}
+            {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+              <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-[10px] text-yellow-500 font-medium leading-relaxed">
+                🔔 ملاحظة: يرجى تفعيل إشعارات المتصفح عند الطلب لتتمكن من تلقي التذكير في الوقت المحدد بنجاح.
+              </div>
+            )}
+
+            {/* Save / Cancel actions */}
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={handleSaveReminder}
+                className="flex-1 py-3 bg-gradient-to-r from-yellow-600 via-amber-400 to-yellow-500 text-stone-950 font-black rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-amber-400/10 border border-amber-300/20"
+              >
+                <span>حفظ التذكير فورا ⏰</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReminderModal(false);
+                  setSelectedReminderMsg(null);
+                }}
+                className="px-5 py-3 bg-[#1C1C1A] hover:bg-[#2E2E2A] text-stone-300 font-extrabold rounded-xl text-xs transition border border-[#2E2E2A]/50 cursor-pointer"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden inputs for real file uploads */}
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleImageUpload}
+        accept="image/*"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={videoInputRef}
+        onChange={handleVideoUpload}
+        accept="video/*"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept="*"
+        className="hidden"
+      />
 
     </div>
   );
