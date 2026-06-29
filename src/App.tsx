@@ -8,6 +8,7 @@ import LoginScreen from './components/LoginScreen';
 import LandingPage from './components/LandingPage';
 import AdminPanel from './components/AdminPanel';
 import BrandLogo from './components/BrandLogo';
+import DownloadModal from './components/DownloadModal';
 import { sounds } from './utils/audio';
 import { 
   collection, 
@@ -38,7 +39,8 @@ import {
   Laptop,
   Wifi,
   WifiOff,
-  ChevronRight
+  ChevronRight,
+  Download
 } from 'lucide-react';
 
 export default function App() {
@@ -62,6 +64,7 @@ export default function App() {
   });
 
   const [showLogin, setShowLogin] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('currentUser_profile');
@@ -1367,6 +1370,16 @@ export default function App() {
             <span className="text-[#A89F91] font-extrabold text-[11px]">الجوال</span>
           </div>
 
+          {/* DOWNLOAD SECURITY APP BUTTON */}
+          <button
+            onClick={() => setShowDownloadModal(true)}
+            className="bg-gradient-to-r from-[#8A6E35] to-[#C5A059] hover:brightness-110 active:scale-95 text-stone-950 text-[10px] sm:text-xs font-black px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl flex items-center gap-1 sm:gap-1.5 transition-all shadow-md cursor-pointer border border-[#E6C15C]/30"
+            title={currentLangCode === 'ar' ? 'تحميل تطبيق الجوال والكمبيوتر المشفر' : 'Download Secure App'}
+          >
+            <Download className="w-3.5 h-3.5 text-stone-950 animate-bounce" />
+            <span>{currentLangCode === 'ar' ? 'تحميل التطبيق' : 'Download App'}</span>
+          </button>
+
           <button 
             onClick={toggleSimulateOffline}
             className={`p-2.5 rounded-xl border transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${
@@ -1523,6 +1536,13 @@ export default function App() {
           contacts={contacts}
         />
       )}
+
+      {/* DOWNLOAD SECURE APP MODAL OVERLAY */}
+      <DownloadModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        currentUserLanguage={currentUser.language}
+      />
 
       {/* AUTOMATED WELCOME NOTIFICATION OVERLAY */}
       {welcomeNotification && welcomeNotification.show && (
