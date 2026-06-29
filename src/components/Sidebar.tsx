@@ -885,6 +885,11 @@ export default function Sidebar({
                             {contact.isGroup && (
                               <span className="text-[9px] bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30 px-1.5 py-0.5 rounded-full font-bold">مجموعة</span>
                             )}
+                            {contact.id.startsWith('google_') && (
+                              <span className="text-[9px] bg-blue-950/50 text-blue-400 border border-blue-800/40 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="مستورد من Google">
+                                🌐 Google
+                              </span>
+                            )}
                             {contact.visibility === 'hidden' && (
                               <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-800/50 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="جهة اتصال مخفية">
                                 🔒 مخفية
@@ -999,6 +1004,11 @@ export default function Sidebar({
                         <span className="text-[8px] bg-[#556B2F]/10 text-[#556B2F] px-1.5 py-0.2 rounded-full font-bold">
                           {contact.isGroup ? 'مجموعة' : contact.role.split(' ')[0]}
                         </span>
+                        {contact.id.startsWith('google_') && (
+                          <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-0.5 border border-blue-200" title="مستورد من Google">
+                            🌐 Google
+                          </span>
+                        )}
                         {contact.visibility === 'hidden' && (
                           <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.2 rounded-full font-bold flex items-center gap-0.5">
                             🔒 مخفية

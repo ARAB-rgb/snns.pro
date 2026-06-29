@@ -659,8 +659,13 @@ export default function ChatArea({
           </div>
 
           <div className="text-right">
-            <h3 className="font-extrabold text-sm text-white flex items-center gap-1.5">
+            <h3 className="font-extrabold text-sm text-white flex items-center gap-1.5 flex-wrap">
               {activeContact.name}
+              {activeContact.id.startsWith('google_') && (
+                <span className="text-[9px] bg-blue-950/50 text-blue-400 border border-blue-800/40 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" title="مستورد من Google">
+                  🌐 Google
+                </span>
+              )}
               <span className="text-[10px] text-[#C5A059] bg-[#C5A059]/10 border border-[#C5A059]/30 px-2 py-0.5 rounded-full font-black">{activeContact.bio?.split('|')[0]}</span>
             </h3>
             <p className="text-[11px] text-stone-400">
