@@ -68,6 +68,23 @@ export const WALLPAPERS: WallpaperOption[] = [
 
 const EMOJI_LIST = ['😀', '😂', '🤣', '👍', '🙏', '❤️', '🔥', '🎉', '💡', '🌹', '💻', '🚗', '🤔', '👀', '👌', '🤝'];
 
+// Helper to render avatar beautifully as either an image or fallback text/emoji
+const renderAvatarContent = (avatarStr: string | undefined, altName: string = "Avatar") => {
+  if (!avatarStr) return <span className="select-none">👤</span>;
+  const isUrl = avatarStr.startsWith('http://') || avatarStr.startsWith('https://');
+  if (isUrl) {
+    return (
+      <img 
+        src={avatarStr} 
+        alt={altName} 
+        className="w-full h-full rounded-full object-cover"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  return <span className="select-none">{avatarStr}</span>;
+};
+
 export default function ChatArea({
   activeContact,
   messages,
@@ -647,8 +664,8 @@ export default function ChatArea({
           </button>
 
           <div className="relative">
-            <div className="w-11 h-11 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-2xl shadow-md select-none">
-              {activeContact.avatar}
+            <div className="w-11 h-11 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-2xl shadow-md select-none overflow-hidden">
+              {renderAvatarContent(activeContact.avatar, activeContact.name)}
             </div>
             {activeContact.status === 'online' && (
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0D0D0C] rounded-full"></span>
@@ -770,8 +787,8 @@ export default function ChatArea({
               <div className="flex gap-2.5 max-w-[80%] items-end">
                 {/* Avatar for remote participant */}
                 {!isMe && (
-                  <div className="w-7 h-7 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-xs select-none text-[#C5A059]">
-                    {msg.senderId === activeContact.id ? activeContact.avatar : '👤'}
+                  <div className="w-7 h-7 rounded-full bg-[#1C1C1A] border border-[#2E2E2A] flex items-center justify-center text-sm shadow-xs select-none text-[#C5A059] overflow-hidden">
+                    {msg.senderId === activeContact.id ? renderAvatarContent(activeContact.avatar, activeContact.name) : '👤'}
                   </div>
                 )}
 
@@ -956,8 +973,8 @@ export default function ChatArea({
         {activeContact.status === 'typing' && (
           <div className="flex w-full justify-end text-right">
             <div className="flex gap-2.5 max-w-[80%] items-end">
-              <div className="w-7 h-7 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-sm shadow-xs select-none text-[#2D2D2D]">
-                {activeContact.avatar}
+              <div className="w-7 h-7 rounded-full bg-[#E5E1D8] border border-white flex items-center justify-center text-sm shadow-xs select-none text-[#2D2D2D] overflow-hidden">
+                {renderAvatarContent(activeContact.avatar, activeContact.name)}
               </div>
               <div className="bg-white border border-[#E5E1D8] text-[#2D2D2D] rounded-2xl rounded-bl-none p-3.5 shadow-md flex items-center gap-1.5">
                 <span className="text-xs text-[#A8A293] font-bold">{activeContact.name} يكتب الآن</span>

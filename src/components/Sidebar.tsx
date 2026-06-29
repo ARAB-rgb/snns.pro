@@ -1785,7 +1785,7 @@ export default function Sidebar({
                         }`}
                       >
                         <span className="flex items-center gap-2">
-                          <span>{c.avatar}</span>
+                          {renderContactAvatar(c, "w-6 h-6 text-xs")}
                           <span className="font-semibold">{c.name}</span>
                           <span className="text-[10px] text-stone-400">({c.role})</span>
                         </span>

@@ -634,7 +634,13 @@ export default function AdminPanel({ currentUser, onClose, contacts }: AdminPane
                       {dbUsers.map((user) => (
                         <tr key={user.id} className="hover:bg-stone-50 transition-colors">
                           <td className="p-3 flex items-center gap-2.5">
-                            <span className="text-xl">{user.avatar || '👤'}</span>
+                            <div className="w-8 h-8 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center text-lg overflow-hidden select-none shrink-0">
+                              {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? (
+                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span>{user.avatar || '👤'}</span>
+                              )}
+                            </div>
                             <div>
                               <span className="block font-bold">{user.name}</span>
                               <span className="text-[10px] text-stone-400 font-mono">{user.id}</span>

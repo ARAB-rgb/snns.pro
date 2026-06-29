@@ -38,6 +38,23 @@ export const VIRTUAL_BACKGROUNDS = [
   { id: 'space', name: 'فضاء عميق 🚀', style: { filter: 'hue-rotate(30deg) saturate(1.15)' }, bgUrl: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800' }
 ];
 
+// Helper to render avatar beautifully as either an image or fallback text/emoji
+const renderAvatarContent = (avatarStr: string | undefined, altName: string = "Avatar") => {
+  if (!avatarStr) return <span className="select-none">👤</span>;
+  const isUrl = avatarStr.startsWith('http://') || avatarStr.startsWith('https://');
+  if (isUrl) {
+    return (
+      <img 
+        src={avatarStr} 
+        alt={altName} 
+        className="w-full h-full rounded-full object-cover"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  return <span className="select-none">{avatarStr}</span>;
+};
+
 export default function VideoCallScreen({
   callState,
   onAcceptCall,
@@ -291,8 +308,8 @@ export default function VideoCallScreen({
         {status === 'ringing_outgoing' && (
           <div className="text-center space-y-6 z-10 animate-fadeIn">
             <div className="relative inline-block">
-              <div className="w-28 h-28 rounded-full bg-[#1C1C1A] border-2 border-[#C5A059] flex items-center justify-center text-5xl shadow-2xl animate-pulse">
-                {contact?.avatar}
+              <div className="w-28 h-28 rounded-full bg-[#1C1C1A] border-2 border-[#C5A059] flex items-center justify-center text-5xl shadow-2xl animate-pulse overflow-hidden">
+                {renderAvatarContent(contact?.avatar, contact?.name)}
               </div>
               <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#C5A059] rounded-full flex items-center justify-center text-xs font-bold text-[#0D0D0C] border-2 border-[#0A0A09] animate-bounce">
                 📞
@@ -309,8 +326,8 @@ export default function VideoCallScreen({
         {status === 'ringing_incoming' && (
           <div className="text-center space-y-6 z-10 animate-fadeIn">
             <div className="relative inline-block">
-              <div className="w-28 h-28 rounded-full bg-[#1C1C1A] border-2 border-[#C5A059] flex items-center justify-center text-5xl shadow-2xl animate-bounce">
-                {contact?.avatar}
+              <div className="w-28 h-28 rounded-full bg-[#1C1C1A] border-2 border-[#C5A059] flex items-center justify-center text-5xl shadow-2xl animate-bounce overflow-hidden">
+                {renderAvatarContent(contact?.avatar, contact?.name)}
               </div>
               <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#C5A059] rounded-full flex items-center justify-center text-xs font-bold text-[#0D0D0C] border-2 border-[#0A0A09] animate-ping">
                 🔔
@@ -377,8 +394,8 @@ export default function VideoCallScreen({
               ) : (
                 (!remoteStreamFromParent || type === 'audio') && (
                   <div className="space-y-4">
-                    <div className="w-24 h-24 rounded-full bg-[#E5E1D8] border-2 border-[#556B2F] flex items-center justify-center text-5xl shadow-2xl">
-                      {contact?.avatar}
+                    <div className="w-24 h-24 rounded-full bg-[#E5E1D8] border-2 border-[#556B2F] flex items-center justify-center text-5xl shadow-2xl overflow-hidden">
+                      {renderAvatarContent(contact?.avatar, contact?.name)}
                     </div>
                     <div className="bg-[#FAF9F6]/90 backdrop-blur-xs px-4 py-1.5 rounded-full border border-[#E5E1D8] shadow-sm">
                       <span className="text-xs font-bold text-[#556B2F] block">
